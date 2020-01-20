@@ -15,7 +15,7 @@ logger = logging.getLogger()
 
 
 @RUNNERS.register_module
-class Runner(object):
+class Runner:
     """ Runner
 
     """
@@ -83,8 +83,8 @@ class Runner(object):
         logger.info('Start testing')
         logger.info('test info: %s' % self.test_cfg)
         self.metric.reset()
-        for img, label in self.loader['val']:
-            self.test_batch(img, label)
+        for data in self.loader['val']:
+            self.test_batch(data[0], data[1])
 
     def train_batch(self, img, label):
         self.model.train()
