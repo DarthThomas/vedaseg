@@ -37,7 +37,7 @@ class VOCDataset(BaseDataset):
         image, mask = self.process(img, mask)
         mask = mask.long()
 
-        return image, mask
+        return image, mask, img_fp, mask_fp
 
     def __len__(self):
         return len(self.imglist)
