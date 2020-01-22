@@ -16,7 +16,7 @@ from vedaseg.utils import MetricMeter
 from vedaseg.runner import build_runner
 
 
-def assemble(cfg_fp, checkpoint='', test_mode=False):
+def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
     _, fullname = os.path.split(cfg_fp)
     fname, ext = os.path.splitext(fullname)
 
@@ -74,17 +74,25 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     # 4. criterion
     criterion = build_criterion(cfg['criterion'])
 
-    logger.info('Assemble, Step 5, Build Optimizer')
-    # 5. optim
-    optim = build_optim(cfg['optimizer'], dict(params=model.parameters()))
+    if infer_mode:
+        logger.info('Assemble, Step 5, Build Optimizer - skipped in infer mode')
+        # 5. optim
+        optim = None
 
-    logger.info('Assemble, Step 6, Build LR Scheduler')
-    # 5. optim
-    # 6. lr scheduler
-    lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim, niter_per_epoch=len(train_loader)))
+        logger.info('Assemble, Step 6, Build LR Scheduler - skipped in infer mode')
+        # 6. lr scheduler
+        lr_scheduler = None
+
+    else:
+        logger.info('Assemble, Step 5, Build Optimizer')
+        # 5. optim
+        optim = build_optim(cfg['optimizer'], dict(params=model.parameters()))
+
+        logger.info('Assemble, Step 6, Build LR Scheduler')
+        # 6. lr scheduler
+        lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim, niter_per_epoch=len(train_loader)))
 
     logger.info('Assemble, Step 7, Build Runner')
-    # 5. optim
     # 7. runner
     runner = build_runner(
         cfg['runner'],
@@ -99,6 +107,7 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
             gpu=gpu,
             test_cfg=cfg.get('test_cfg', None),
             test_mode=test_mode,
+            infer_cfg=cfg['infer_cfg'] if infer_mode else None
         )
     )
 
