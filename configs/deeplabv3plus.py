@@ -161,3 +161,11 @@ runner = dict(
 
 # 8. device
 gpu_id = '0,1'
+
+# 9. infer
+infer_cfg = dict(
+    tta=True,
+    save_heatmap=True,
+    save_metric=True,
+    save_dir='data/res/'
+)
