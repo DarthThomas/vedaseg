@@ -203,11 +203,11 @@ class Runner:
         dest_fp = osp.join(data_root, model_info)
 
         if save_heatmap:
-            heat_map_fp = osp.join(dest_fp, model_info, 'heat_map')
+            heat_map_fp = osp.join(dest_fp, 'heat_map')
             mkdir_or_exist(heat_map_fp)
             prob_ = prob.cpu().numpy()
         if save_metric:
-            metric_fp = osp.join(dest_fp, model_info, 'metric')
+            metric_fp = osp.join(dest_fp, 'metric')
             mkdir_or_exist(metric_fp)
             pred_ = pred_label.cpu().numpy()
             gt_ = label.cpu().numpy()
