@@ -180,7 +180,8 @@ class Runner:
 
         if self.gpu:
             img = img.cuda()
-            label = label.cuda() if label else None
+            if label is not None:
+                label = label.cuda()
 
         save_heatmap = self.infer_cfg.get('save_heatmap', False)
         save_metric = self.infer_cfg.get('save_metric', False)
