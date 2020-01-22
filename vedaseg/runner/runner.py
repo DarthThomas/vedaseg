@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
+from vedaseg.utils.path import mkdir_or_exist
 
 from .registry import RUNNERS
 
@@ -203,9 +204,11 @@ class Runner:
 
         if save_heatmap:
             heat_map_fp = osp.join(dest_fp, model_info, 'heat_map')
+            mkdir_or_exist(heat_map_fp)
             prob_ = prob.cpu().numpy()
         if save_metric:
             metric_fp = osp.join(dest_fp, model_info, 'metric')
+            mkdir_or_exist(metric_fp)
             pred_ = pred_label.cpu().numpy()
             gt_ = label.cpu().numpy()
 
