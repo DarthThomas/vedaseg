@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
+from vedaseg.utils.path import mkdir_or_exist
 
 from .registry import RUNNERS
 
@@ -185,6 +186,9 @@ class Runner:
 
         save_heatmap = self.infer_cfg.get('save_heatmap', False)
         save_metric = self.infer_cfg.get('save_metric', False)
+
+        for _ in [save_metric, save_heatmap]:
+            mkdir_or_exist(_)
 
         n, c, h, w = img.size()
         assert n == len(filenames)
