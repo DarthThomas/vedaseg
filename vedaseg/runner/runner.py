@@ -1,9 +1,11 @@
-import torch
 import logging
 import os.path as osp
-import torch.nn.functional as F
-import numpy as np
+import pickle
 from collections.abc import Iterable
+
+import numpy as np
+import torch
+import torch.nn.functional as F
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 
@@ -19,6 +21,7 @@ class Runner:
     """ Runner
 
     """
+
     def __init__(self,
                  loader,
                  model,
@@ -33,7 +36,8 @@ class Runner:
                  snapshot_interval=1,
                  gpu=True,
                  test_cfg=None,
-                 test_mode=False):
+                 test_mode=False,
+                 infer_cfg=None):
         self.loader = loader
         self.model = model
         self.criterion = criterion
@@ -48,9 +52,13 @@ class Runner:
         self.gpu = gpu
         self.test_cfg = test_cfg
         self.test_mode = test_mode
+        self.infer_cfg = infer_cfg
+        self.infer_mode = infer_cfg is not None
 
     def __call__(self):
-        if self.test_mode:
+        if self.infer_mode:
+            self.infer_epoch()
+        elif self.test_mode:
             self.test_epoch()
         else:
             assert self.trainval_ratio > 0
@@ -66,8 +74,8 @@ class Runner:
         logger.info('Epoch %d, Start training' % self.epoch)
         iter_based = hasattr(self.lr_scheduler, '_iter_based')
         self.metric.reset()
-        for img, label in self.loader['train']:
-            self.train_batch(img, label)
+        for data in self.loader['train']:
+            self.train_batch(data[0], data[1])
             if iter_based:
                 self.lr_scheduler.step()
         if not iter_based:
@@ -76,8 +84,8 @@ class Runner:
     def validate_epoch(self):
         logger.info('Epoch %d, Start validating' % self.epoch)
         self.metric.reset()
-        for img, label in self.loader['val']:
-            self.validate_batch(img, label)
+        for data in self.loader['val']:
+            self.validate_batch(data[0], data[1])
 
     def test_epoch(self):
         logger.info('Start testing')
@@ -85,6 +93,13 @@ class Runner:
         self.metric.reset()
         for data in self.loader['val']:
             self.test_batch(data[0], data[1])
+
+    def infer_epoch(self):
+        logger.info('Start inference')
+        logger.info('inference info: %s' % self.infer_cfg)
+        self.metric.reset()
+        for data in self.loader['val']:
+            self.infer_batch(data)
 
     def train_batch(self, img, label):
         self.model.train()
@@ -101,7 +116,7 @@ class Runner:
         self.optim.step()
 
         with torch.no_grad():
-            
+
             '''
             import matplotlib.pyplot as plt
             pred = (prob[0]).permute(1, 2, 0).float().cpu().numpy()[:, :, 0]
@@ -142,26 +157,91 @@ class Runner:
 
     def test_batch(self, img, label):
         self.model.eval()
+
+        if self.gpu:
+            img = img.cuda()
+            label = label.cuda()
+
+        prob = self.test_time_augment(img)
+        _, pred_label = torch.max(prob, dim=1)
+
+        self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+        miou, ious = self.metric.miou()
+        logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
+
+    def infer_batch(self, data):
+        if len(data) == 3:
+            img, label, filenames = data
+        elif len(data) == 2:
+            img, filenames = data
+            label = None
+        else:
+            raise TypeError(f'length of data must be 2 or 3, but got {len(data)}')
+
+        if self.gpu:
+            img = img.cuda()
+            label = label.cuda() if label else None
+
+        save_heatmap = self.infer_cfg.get('save_heatmap', False)
+        save_metric = self.infer_cfg.get('save_metric', False)
+
+        n, c, h, w = img.size()
+        assert n == len(filenames)
+
+        if self.infer_cfg.get('tta', False):
+            prob = self.test_time_augment(img)
+            model_info = 'model_tta'
+        else:
+            model_info = 'model'
+            with torch.no_grad():
+                prob = self.model(img)
+        _, pred_label = torch.max(prob, dim=1)
+
+        data_root = self.loader.dataset.root
+        dest_fp = osp.join(data_root, model_info)
+
+        if save_heatmap:
+            heat_map_fp = osp.join(dest_fp, model_info, 'heat_map')
+            prob_ = prob.cpu().numpy()
+        if save_metric:
+            metric_fp = osp.join(dest_fp, model_info, 'metric')
+            pred_ = pred_label.cpu().numpy()
+            gt_ = label.cpu().numpy()
+
+        for idx, file in enumerate(filenames):
+            if save_heatmap:
+                pred_map = prob_[idx, :]
+                heat_map_pkl = osp.join(heat_map_fp, f'{file}.pkl')
+                with open(heat_map_pkl, "wb") as f:
+                    pickle.dump(pred_map, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+            if save_metric:
+                mask_gt = gt_[idx, :]
+                pred_res = pred_[idx, :]
+                self.metric.reset()
+                self.metric.add(pred_res, mask_gt)
+                miou, ious = self.metric.miou()
+                metric_pkl = osp.join(metric_fp, f'{file}.pkl')
+                with open(metric_pkl, "wb") as f:
+                    pickle.dump((miou, ious), f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        logger.info(f'Test, batch size: {n}')
+
+    def test_time_augment(self, img):
+        scales, flip, biases = [1.0], False, [0.0]
+        if self.test_cfg:
+            scales = self.test_cfg.get('scales', [1.0])
+            flip = self.test_cfg.get('flip', False)
+            biases = self.test_cfg.get('bias', [0.0])
+        assert len(scales) == len(biases)
+
+        self.model.eval()
         with torch.no_grad():
-            if self.gpu:
-                img = img.cuda()
-                label = label.cuda()
-
-            if self.test_cfg:
-                scales = self.test_cfg.get('scales', [1.0])
-                flip = self.test_cfg.get('flip', False)
-                biases = self.test_cfg.get('bias', [0.0])
-            else:
-                scales = [1.0]
-                flip = False
-                biases = [0.0]
-
-            assert len(scales) == len(biases)
 
             n, c, h, w = img.size()
             probs = []
-            for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
+            for idx, (scale, bias) in enumerate(zip(scales, biases)):
+                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
                 new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
@@ -172,11 +252,7 @@ class Runner:
                     prob = flip_prob.flip(3)
                     probs.append(prob)
             prob = torch.stack(probs, dim=0).mean(dim=0)
-
-            _, pred_label = torch.max(prob, dim=1)
-            self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
-            miou, ious = self.metric.miou()
-            logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
+        return prob
 
     def save_checkpoint(self,
                         out_dir,
