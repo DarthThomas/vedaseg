@@ -198,7 +198,7 @@ class Runner:
                 prob = self.model(img)
         _, pred_label = torch.max(prob, dim=1)
 
-        data_root = self.loader.dataset.root
+        data_root = self.loader['val'].dataset.root
         dest_fp = osp.join(data_root, model_info)
 
         if save_heatmap:
