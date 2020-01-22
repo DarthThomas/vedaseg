@@ -225,7 +225,7 @@ class Runner:
                 with open(metric_pkl, "wb") as f:
                     pickle.dump((miou, ious), f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        logger.info(f'Test, batch size: {n}')
+        logger.info(f'Inference, batch size: {n}')
 
     def test_time_augment(self, img):
         scales, flip, biases = [1.0], False, [0.0]
