@@ -210,14 +210,16 @@ class Runner:
             metric_fp = osp.join(dest_fp, 'metric')
             mkdir_or_exist(metric_fp)
             pred_ = pred_label.cpu().numpy()
+        if save_heatmap or save_metric:
             gt_ = label.cpu().numpy()
 
         for idx, file in enumerate(filenames):
             if save_heatmap:
                 pred_map = prob_[idx, :]
+                gt_map = gt_[idx, :]
                 heat_map_pkl = osp.join(heat_map_fp, f'{file}.pkl')
                 with open(heat_map_pkl, "wb") as f:
-                    pickle.dump(pred_map, f, protocol=pickle.HIGHEST_PROTOCOL)
+                    pickle.dump((pred_map, gt_map), f, protocol=pickle.HIGHEST_PROTOCOL)
 
             if save_metric:
                 mask_gt = gt_[idx, :]
