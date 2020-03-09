@@ -1,12 +1,8 @@
 import argparse
-import os
-import sys
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-
-sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../vedaseg'))
 
 from vedaseg.assemble import assemble
 
@@ -70,7 +66,7 @@ def main():
     img_dir = args.img_dir
 
     image = get_image(img_dir)
-    runner = assemble(cfg_fp, checkpoint, infer_mode=True)
+    runner = assemble(cfg_fp, checkpoint)
 
     prediction = runner(image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     get_plot(image, prediction, vis_mask=True, vis_contour=True)
