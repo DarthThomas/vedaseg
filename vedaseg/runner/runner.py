@@ -88,11 +88,13 @@ class Runner(object):
         factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
         new_h = int(h * factor)
         new_w = int(w * factor)
+        # resize image to 'longer edge=infer_size'
         image = cv2.resize(image, (new_h, new_w), interpolation=cv2.INTER_AREA)
         image, _ = self.infer_tf(image, np.zeros(image.shape[:2], dtype=np.float32))
-        print(image.size())
+
         prob = self.test_time_aug(image.unsqueeze(0))
-        print()
+        prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
+
         _, pred_label = torch.max(prob, dim=1)
 
         pred_label = pred_label.cpu().numpy()
@@ -100,14 +102,10 @@ class Runner(object):
         print(pred_label.shape)
         print(pred_label.max())
         print(pred_label.min())
-        res = cv2.resize(pred_label, (le, le), interpolation=cv2.INTER_AREA)
-        print(res.max())
-        print(res.min())
+
         # pred_label = pred_label.float()
         # pred_label = F.interpolate(pred_label.unsqueeze(0), size=(le, le), mode='bilinear', align_corners=True)
-        res = res[:h, :w]
-        plt.imshow(res)
-        plt.show()
+        res = pred_label[:h, :w]
         return res
 
     def train_epoch(self):
@@ -189,7 +187,8 @@ class Runner(object):
             logger.info('Validate, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def test_batch(self, img, label):
-        pred_label = self.test_time_aug(img)
+        prob = self.test_time_aug(img)
+        _, pred_label = torch.max(prob, dim=1)
         self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
         miou, ious = self.metric.miou()
         logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
