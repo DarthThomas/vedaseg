@@ -92,7 +92,7 @@ class Runner(object):
         # resize image to 'longer edge=infer_size'
         plt.imshow(image)
         plt.show()
-        
+
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
         plt.imshow(image)
         plt.show()
