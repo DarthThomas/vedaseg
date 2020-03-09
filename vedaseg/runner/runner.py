@@ -110,8 +110,8 @@ class Runner(object):
         _, pred_label = torch.max(prob, dim=1)
         print(pred_label.size())
 
-        pred_label = pred_label.cpu().numpy()
-        pred_label = np.squeeze(pred_label, axis=0)
+        pred_label = pred_label[0, :h, :w].cpu().numpy()
+        # pred_label = np.squeeze(pred_label, axis=0)
         print(pred_label.min())
         print(pred_label.max())
         res = pred_label[:h, :w]
