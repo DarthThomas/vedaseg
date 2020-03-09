@@ -16,9 +16,10 @@ from vedaseg.utils import MetricMeter
 from vedaseg.runner import build_runner
 
 
-def assemble(cfg_fp, checkpoint='', test_mode=False):
+def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
     _, fullname = os.path.split(cfg_fp)
     fname, ext = os.path.splitext(fullname)
+    step = 0
 
     cfg = utils.Config.fromfile(cfg_fp)
 
@@ -26,10 +27,11 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     os.environ['CUDA_VISIBLE_DEVICES'] = cfg['gpu_id']
 
     # make workdir if not exist
-    root_workdir = cfg.pop('root_workdir')
-    cfg['workdir'] = os.path.join(root_workdir, fname)
+    if not infer_mode:
+        root_workdir = cfg.pop('root_workdir')
+        cfg['workdir'] = os.path.join(root_workdir, fname)
 
-    os.makedirs(cfg['workdir'], exist_ok=True)
+        os.makedirs(cfg['workdir'], exist_ok=True)
 
     # set seed if not None
     seed = cfg.pop('seed')
@@ -37,27 +39,34 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
         utils.set_random_seed(seed)
 
     # 1. logging
+    if infer_mode:
+        cfg['logger']['handlers'] = (dict(type='StreamHandler', level='WARNING'))
     logger = build_logger(cfg['logger'], dict(workdir=cfg['workdir']))
 
-    logger.info('Assemble, Step 1, Build Dataset')
-    # 2. data
-    ## 2.1 dataset
-    train_tf = build_transform(cfg['data']['train']['transforms'])
-    train_dataset = build_dataset(cfg['data']['train']['dataset'], dict(transform=train_tf))
+    loader = None
+    if not infer_mode:
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build Dataset')
+        # 2. data
+        ## 2.1 dataset
+        train_tf = build_transform(cfg['data']['train']['transforms'])
+        train_dataset = build_dataset(cfg['data']['train']['dataset'], dict(transform=train_tf))
 
-    if cfg['data'].get('val'):
-        val_tf = build_transform(cfg['data']['val']['transforms'])
-        val_dataset = build_dataset(cfg['data']['val']['dataset'], dict(transform=val_tf))
+        if cfg['data'].get('val'):
+            val_tf = build_transform(cfg['data']['val']['transforms'])
+            val_dataset = build_dataset(cfg['data']['val']['dataset'], dict(transform=val_tf))
 
-    logger.info('Assemble, Step 2, Build Dataloader')
-    # 2.2 dataloader
-    train_loader = build_dataloader(cfg['data']['train']['loader'], dict(dataset=train_dataset))
-    loader = {'train': train_loader}
-    if cfg['data'].get('val'):
-        val_loader = build_dataloader(cfg['data']['val']['loader'], dict(dataset=val_dataset))
-        loader['val'] = val_loader
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build Dataloader')
+        # 2.2 dataloader
+        train_loader = build_dataloader(cfg['data']['train']['loader'], dict(dataset=train_dataset))
+        loader = {'train': train_loader}
+        if cfg['data'].get('val'):
+            val_loader = build_dataloader(cfg['data']['val']['loader'], dict(dataset=val_dataset))
+            loader['val'] = val_loader
 
-    logger.info('Assemble, Step 3, Build Model')
+    step += 1
+    logger.info(f'Assemble, Step {step}, Build Model')
     # 3. model
     model = build_model(cfg['model'])
     if torch.cuda.is_available():
@@ -70,20 +79,26 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
         logger.info('Using CPU')
         gpu = False
 
-    logger.info('Assemble, Step 4, Build Criterion')
-    # 4. criterion
-    criterion = build_criterion(cfg['criterion'])
+    criterion, optim, lr_scheduler = None, None, None
+    if not infer_mode:
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build Criterion')
+        # 4. criterion
+        criterion = build_criterion(cfg['criterion'])
 
-    logger.info('Assemble, Step 5, Build Optimizer')
-    # 5. optim
-    optim = build_optim(cfg['optimizer'], dict(params=model.parameters()))
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build Optimizer')
+        # 5. optim
+        optim = build_optim(cfg['optimizer'], dict(params=model.parameters()))
 
-    logger.info('Assemble, Step 6, Build LR Scheduler')
-    # 5. optim
-    # 6. lr scheduler
-    lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim, niter_per_epoch=len(train_loader)))
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build LR Scheduler')
+        # 5. optim
+        # 6. lr scheduler
+        lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim, niter_per_epoch=len(train_loader)))
 
-    logger.info('Assemble, Step 7, Build Runner')
+    step += 1
+    logger.info(f'Assemble, Step {step}, Build Runner')
     # 5. optim
     # 7. runner
     runner = build_runner(
@@ -92,13 +107,14 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
             loader=loader,
             model=model,
             criterion=criterion,
-            metric=MetricMeter(cfg['nclasses']),
+            metric=None if infer_mode else MetricMeter(cfg['nclasses']),
             optim=optim,
             lr_scheduler=lr_scheduler,
             workdir=cfg['workdir'],
             gpu=gpu,
             test_cfg=cfg.get('test_cfg', None),
             test_mode=test_mode,
+            infer_mode=infer_mode
         )
     )
 
