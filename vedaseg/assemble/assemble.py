@@ -43,7 +43,7 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
         cfg['logger']['handlers'] = (dict(type='StreamHandler', level='WARNING'))
     logger = build_logger(cfg['logger'], dict(workdir=cfg['workdir']))
 
-    loader = None
+    loader, infer_tf, infer_size = None, None, None
     if not infer_mode:
         step += 1
         logger.info(f'Assemble, Step {step}, Build Dataset')
@@ -64,6 +64,18 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
         if cfg['data'].get('val'):
             val_loader = build_dataloader(cfg['data']['val']['loader'], dict(dataset=val_dataset))
             loader['val'] = val_loader
+    else:
+        step += 1
+        logger.info(f'Assemble, Step {step}, Build Transformer')
+        # 2. data
+        ## 2.1 transformer
+        if cfg.get('test_cfg', None) is None:
+            infer_size = cfg['net_size']
+        else:
+            factor = max(cfg['test_cfg']['scales'])
+            infer_size = int(cfg['net_size'] / factor)
+
+        infer_tf = build_transform(cfg['data']['infer']['transforms'])
 
     step += 1
     logger.info(f'Assemble, Step {step}, Build Model')
@@ -114,7 +126,9 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
             gpu=gpu,
             test_cfg=cfg.get('test_cfg', None),
             test_mode=test_mode,
-            infer_mode=infer_mode
+            infer_mode=infer_mode,
+            infer_tf=infer_tf,
+            infer_size=infer_size  # TODO: read infer size from  model so that we don't need this kwarg
         )
     )
 
