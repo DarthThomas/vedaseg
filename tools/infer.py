@@ -22,10 +22,11 @@ def parse_args():
 
 
 def get_contours(image, mask):
-    mask_img = mask * 255
-    _, thres = cv2.threshold(mask_img.astype(np.uint8), 127, 255, 0)
+    # mask_img = mask * 255
+    # _, thres = cv2.threshold(mask_img.astype(np.uint8), 127, 255, 0)
     contour_img = image.copy()
-    _, contours, _ = cv2.findContours(thres, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # _, contours, _ = cv2.findContours(thres, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(contour_img, contours, -1, (0, 255, 0), 3)
     return contour_img
 
@@ -59,7 +60,6 @@ def get_plot(img, pd, vis_mask=True, vis_contour=True):
 
 
 def image_overlay(image, mask, color):
-    # pred = mask * 255
     heat_map = np.zeros_like(image)
     heat_map[mask > 0] = color
     fin = cv2.addWeighted(heat_map, -0.5, image, 0.8, 0)
