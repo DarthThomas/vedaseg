@@ -82,6 +82,7 @@ class Runner(object):
 
     def infer_img(self, image):
         image = image.astype(np.float32)
+        print(image.shape)
         h, w, c = image.shape
         le = max(h, w)
         factor = self.infer_size / le
@@ -89,7 +90,11 @@ class Runner(object):
         new_h = int(h * factor)
         new_w = int(w * factor)
         # resize image to 'longer edge=infer_size'
+        plt.imshow(image)
+        plt.show()
         image = cv2.resize(image, (new_h, new_w), interpolation=cv2.INTER_AREA)
+        plt.imshow(image)
+        plt.show()
         image, _ = self.infer_tf(image, np.zeros(image.shape[:2], dtype=np.float32))
 
         prob = self.test_time_aug(image.unsqueeze(0))
