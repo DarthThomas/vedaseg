@@ -84,6 +84,7 @@ class Runner(object):
         factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
         new_h = int(h * factor)
         new_w = int(w * factor)
+        # resize original image so that the long edge = self.infer_size
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
@@ -93,6 +94,7 @@ class Runner(object):
                 image = image.cuda()
             prob = self.model(image.unsqueeze(0))
 
+        # resize prediction to the same size of original image
         prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
         _, pred_label = torch.max(prob, dim=1)
 

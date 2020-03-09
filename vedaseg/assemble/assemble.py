@@ -71,12 +71,6 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
         # 2. data
         ## 2.1 transformer
         infer_size = cfg['net_size']
-        # if cfg.get('test_cfg', None) is None:
-        #     infer_size = cfg['net_size']
-        # else:
-        #     factor = max(cfg['test_cfg']['scales'])
-        #     infer_size = int(cfg['net_size'] / factor)
-
         infer_tf = build_transform(cfg['data']['infer']['transforms'])
 
     step += 1
@@ -107,13 +101,11 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
 
         step += 1
         logger.info(f'Assemble, Step {step}, Build LR Scheduler')
-        # 5. optim
         # 6. lr scheduler
         lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim, niter_per_epoch=len(train_loader)))
 
     step += 1
     logger.info(f'Assemble, Step {step}, Build Runner')
-    # 5. optim
     # 7. runner
     runner = build_runner(
         cfg['runner'],
