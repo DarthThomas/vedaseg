@@ -81,14 +81,12 @@ class Runner(object):
                     self.validate_epoch()
 
     def infer_img(self, image):
-        image = image
         h, w, c = image.shape
         le = max(h, w)
         factor = self.infer_size / le
         factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
         new_h = int(h * factor)
         new_w = int(w * factor)
-
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
@@ -182,31 +180,24 @@ class Runner(object):
             logger.info('Validate, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def test_batch(self, img, label):
-        prob = self.test_time_aug(img)
-        _, pred_label = torch.max(prob, dim=1)
-        self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
-        miou, ious = self.metric.miou()
-        logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
-
-    def test_time_aug(self, img):
-
-        scales, flip, biases = [1.0], False, [0.0]
-        if self.test_cfg:
-            scales = self.test_cfg.get('scales', [1.0])
-            flip = self.test_cfg.get('flip', False)
-            biases = self.test_cfg.get('bias', [0.0])
-        assert len(scales) == len(biases)
-
         self.model.eval()
+        scales, flip, biases = [1.0], False, [0.0]
         with torch.no_grad():
             if self.gpu:
                 img = img.cuda()
+                label = label.cuda()
+
+            if self.test_cfg:
+                scales = self.test_cfg.get('scales', [1.0])
+                flip = self.test_cfg.get('flip', False)
+                biases = self.test_cfg.get('bias', [0.0])
+
+            assert len(scales) == len(biases)
 
             n, c, h, w = img.size()
-
             probs = []
             for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
+                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
                 new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
@@ -217,7 +208,11 @@ class Runner(object):
                     prob = flip_prob.flip(3)
                     probs.append(prob)
             prob = torch.stack(probs, dim=0).mean(dim=0)
-        return prob
+
+            _, pred_label = torch.max(prob, dim=1)
+            self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+            miou, ious = self.metric.miou()
+            logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def save_checkpoint(self,
                         out_dir,
