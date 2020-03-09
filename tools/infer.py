@@ -56,7 +56,7 @@ def get_contours(image, mask):
 
 def get_image(img_dir):
     sample = cv2.imread(img_dir)
-    return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
+    return sample
 
 
 def get_plot(img, pd, vis_mask=True, vis_contour=True):
