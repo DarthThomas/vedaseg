@@ -1,19 +1,16 @@
-import torch
 import logging
 import os.path as osp
-import torch.nn.functional as F
-import numpy as np
 from collections.abc import Iterable
 
 import cv2
-import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn.functional as F
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
-
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
-
 logger = logging.getLogger()
 
 
@@ -197,7 +194,7 @@ class Runner(object):
             n, c, h, w = img.size()
             probs = []
             for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
+                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
                 new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
