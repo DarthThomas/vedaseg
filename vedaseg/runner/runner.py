@@ -104,13 +104,18 @@ class Runner(object):
             prob = self.model(image.unsqueeze(0))
         # prob = self.test_time_aug(image.unsqueeze(0))
         prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
-
+        print(prob.size())
         _, pred_label = torch.max(prob, dim=1)
+        print(pred_label.size())
 
         pred_label = pred_label.cpu().numpy()
         pred_label = np.squeeze(pred_label, axis=0)
-
+        print(pred_label.min())
+        print(pred_label.max())
         res = pred_label[:h, :w]
+        print(res.shape)
+        print(res.max())
+        print(res.min())
         return res
 
     def train_epoch(self):
