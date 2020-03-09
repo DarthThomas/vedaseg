@@ -1,6 +1,6 @@
 import argparse
-import sys
 import os
+import sys
 
 import cv2
 import matplotlib.pyplot as plt
@@ -22,29 +22,6 @@ def parse_args():
     return args
 
 
-def main():
-    args = parse_args()
-    cfg_fp = args.config
-    checkpoint = args.checkpoint
-    img_dir = args.img_dir
-
-    image = get_image(img_dir)
-    runner = assemble(cfg_fp, checkpoint, infer_mode=True)
-
-    prediction = runner(image=image)
-    get_plot(image, prediction, vis_mask=True, vis_contour=True)
-
-
-def image_overlay(image, mask, color):
-    # pred = mask * 255
-    heat_map = np.zeros_like(image)
-    heat_map[mask] = color
-    # heat_map = cv2.applyColorMap(pred.astype(np.uint8), cv2.COLORMAP_JET)
-    img_pd = image.copy()
-    fin = cv2.addWeighted(heat_map, -0.5, img_pd, 0.8, 0)
-    return fin
-
-
 def get_contours(image, mask):
     mask_img = mask * 255
     _, thres = cv2.threshold(mask_img.astype(np.uint8), 127, 255, 0)
@@ -56,7 +33,7 @@ def get_contours(image, mask):
 
 def get_image(img_dir):
     sample = cv2.imread(img_dir)
-    return sample
+    return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
 
 
 def get_plot(img, pd, vis_mask=True, vis_contour=True):
@@ -80,6 +57,29 @@ def get_plot(img, pd, vis_mask=True, vis_contour=True):
 
     plt.show()
     return plt
+
+
+def image_overlay(image, mask, color):
+    # pred = mask * 255
+    heat_map = np.zeros_like(image)
+    heat_map[mask] = color
+    # heat_map = cv2.applyColorMap(pred.astype(np.uint8), cv2.COLORMAP_JET)
+    img_pd = image.copy()
+    fin = cv2.addWeighted(heat_map, -0.5, img_pd, 0.8, 0)
+    return fin
+
+
+def main():
+    args = parse_args()
+    cfg_fp = args.config
+    checkpoint = args.checkpoint
+    img_dir = args.img_dir
+
+    image = get_image(img_dir)
+    runner = assemble(cfg_fp, checkpoint, infer_mode=True)
+
+    prediction = runner(image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    get_plot(image, prediction, vis_mask=True, vis_contour=True)
 
 
 if __name__ == '__main__':
