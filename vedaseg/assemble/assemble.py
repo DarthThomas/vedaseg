@@ -132,7 +132,7 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
         )
     )
 
-    if test_mode:
+    if test_mode or infer_mode:
         cfg['resume'] = dict(checkpoint=checkpoint, resume_optimizer=False, resume_lr=False, resume_epoch=False)
 
     if cfg['resume']:
