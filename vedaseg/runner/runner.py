@@ -96,7 +96,7 @@ class Runner(object):
         plt.imshow(image)
         plt.show()
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
-        prob = self.model(image.unsqueeze(0))
+        prob = self.model(image).softmax(dim=1)
         # prob = self.test_time_aug(image.unsqueeze(0))
         prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
 
