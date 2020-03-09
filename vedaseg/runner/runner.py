@@ -92,7 +92,8 @@ class Runner(object):
         # resize image to 'longer edge=infer_size'
         plt.imshow(image)
         plt.show()
-        image = cv2.resize(image, (new_h, new_w), interpolation=cv2.INTER_AREA)
+        
+        image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
         plt.imshow(image)
         plt.show()
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
@@ -108,12 +109,7 @@ class Runner(object):
 
         pred_label = pred_label.cpu().numpy()
         pred_label = np.squeeze(pred_label, axis=0)
-        print(pred_label.shape)
-        print(pred_label.max())
-        print(pred_label.min())
 
-        # pred_label = pred_label.float()
-        # pred_label = F.interpolate(pred_label.unsqueeze(0), size=(le, le), mode='bilinear', align_corners=True)
         res = pred_label[:h, :w]
         return res
 
