@@ -19,6 +19,7 @@ class Runner(object):
     """ Runner
 
     """
+
     def __init__(self,
                  loader,
                  model,
@@ -33,7 +34,10 @@ class Runner(object):
                  snapshot_interval=1,
                  gpu=True,
                  test_cfg=None,
-                 test_mode=False):
+                 test_mode=False,
+                 infer_mode=False,
+                 infer_tf=None,
+                 infer_size=None):
         self.loader = loader
         self.model = model
         self.criterion = criterion
@@ -48,9 +52,20 @@ class Runner(object):
         self.gpu = gpu
         self.test_cfg = test_cfg
         self.test_mode = test_mode
+        self.infer_mode = infer_mode
+        self.infer_tf = infer_tf
+        self.infer_size = infer_size  # TODO: read infer size from  model so that we don't need this kwarg
 
-    def __call__(self):
-        if self.test_mode:
+    def __call__(self, image=None):
+        if self.infer_mode:
+            if isinstance(image, list):
+                res = []
+                for img in image:
+                    res.append(self.infer_img(img))
+            else:
+                res = self.infer_img(image)
+            return res
+        elif self.test_mode:
             self.test_epoch()
         else:
             assert self.trainval_ratio > 0
@@ -61,6 +76,20 @@ class Runner(object):
                         and (epoch + 1) % self.trainval_ratio == 0 \
                         and self.loader.get('val'):
                     self.validate_epoch()
+
+    def infer_img(self, image):
+        h, w, _ = image.shape
+        assert _ == 3
+        le = max(h, w)
+        factor = self.infer_size / le
+        new_le = min(self.infer_size, int(le * factor))
+
+        image, _ = self.infer_tf(image, np.zeros_like(image))
+        new_img = F.interpolate(image, size=(new_le, new_le), mode='bilinear', align_corners=True)
+        pred_label = self.test_time_aug(new_img)
+        pred_label = F.interpolate(pred_label, size=(le, le), mode='bilinear', align_corners=True)
+        res = pred_label.cpu().numpy()[:h, :w]
+        return res
 
     def train_epoch(self):
         logger.info('Epoch %d, Start training' % self.epoch)
@@ -101,7 +130,7 @@ class Runner(object):
         self.optim.step()
 
         with torch.no_grad():
-            
+
             '''
             import matplotlib.pyplot as plt
             pred = (prob[0]).permute(1, 2, 0).float().cpu().numpy()[:, :, 0]
@@ -141,27 +170,36 @@ class Runner(object):
             logger.info('Validate, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def test_batch(self, img, label):
+        pred_label = self.test_time_aug(img)
+        self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+        miou, ious = self.metric.miou()
+        logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
+
+    def test_time_aug(self, img):
         self.model.eval()
+        scales = [1.0]
+        flip = False
+        biases = [0.0]
+
         with torch.no_grad():
             if self.gpu:
                 img = img.cuda()
-                label = label.cuda()
 
             if self.test_cfg:
                 scales = self.test_cfg.get('scales', [1.0])
                 flip = self.test_cfg.get('flip', False)
                 biases = self.test_cfg.get('bias', [0.0])
-            else:
-                scales = [1.0]
-                flip = False
-                biases = [0.0]
 
             assert len(scales) == len(biases)
 
-            n, c, h, w = img.size()
+            if len(img.size()) == 4:
+                n, c, h, w = img.size()
+            elif len(img.size()) == 3:
+                c, h, w = img.size()
+
             probs = []
             for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
+                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
                 new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
@@ -174,9 +212,7 @@ class Runner(object):
             prob = torch.stack(probs, dim=0).mean(dim=0)
 
             _, pred_label = torch.max(prob, dim=1)
-            self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
-            miou, ious = self.metric.miou()
-            logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
+        return pred_label
 
     def save_checkpoint(self,
                         out_dir,
