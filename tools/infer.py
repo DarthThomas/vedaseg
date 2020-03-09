@@ -48,7 +48,6 @@ def get_plot(img, pd, vis_mask=True, vis_contour=True):
     plt.subplot(122)
     plt.title('image with prediction')
     if vis_mask:
-        print('where is the fucking mask')
         img = image_overlay(img, pd, [0, 255, 0])
     if vis_contour:
         img = get_contours(img, pd)
@@ -62,7 +61,7 @@ def get_plot(img, pd, vis_mask=True, vis_contour=True):
 def image_overlay(image, mask, color):
     # pred = mask * 255
     heat_map = np.zeros_like(image)
-    heat_map[mask] = color
+    heat_map[mask > 0] = color
     fin = cv2.addWeighted(heat_map, -0.5, image, 0.8, 0)
     return fin
 
