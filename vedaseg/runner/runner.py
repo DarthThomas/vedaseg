@@ -82,43 +82,26 @@ class Runner(object):
 
     def infer_img(self, image):
         image = image
-        print(image.shape)
         h, w, c = image.shape
         le = max(h, w)
         factor = self.infer_size / le
         factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
         new_h = int(h * factor)
         new_w = int(w * factor)
-        # resize image to 'longer edge=infer_size'
-        plt.imshow(image)
-        plt.show()
 
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        plt.imshow(image)
-        plt.show()
+
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
         self.model.eval()
         with torch.no_grad():
             if self.gpu:
                 image = image.cuda()
             prob = self.model(image.unsqueeze(0))
-        # prob = self.test_time_aug(image.unsqueeze(0))
-        prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
-        print(prob.size())
-        plt.imshow(prob[0, 1, :, :].cpu().numpy())
-        plt.show()
-        _, pred_label = torch.max(prob, dim=1)
-        print(pred_label.size())
 
-        pred_label = pred_label[0, :h, :w].cpu().numpy()
-        # pred_label = np.squeeze(pred_label, axis=0)
-        print(pred_label.min())
-        print(pred_label.max())
-        res = pred_label[:h, :w]
-        print(res.shape)
-        print(res.max())
-        print(res.min())
-        return res
+        prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
+        _, pred_label = torch.max(prob, dim=1)
+
+        return pred_label[0, :h, :w].cpu().numpy()
 
     def train_epoch(self):
         logger.info('Epoch %d, Start training' % self.epoch)
