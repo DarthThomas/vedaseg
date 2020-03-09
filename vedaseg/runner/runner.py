@@ -105,7 +105,7 @@ class Runner(object):
         # prob = self.test_time_aug(image.unsqueeze(0))
         prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
         print(prob.size())
-        plt.imshow(prob[0, 1, :, :])
+        plt.imshow(prob[0, 1, :, :].cpu().numpy())
         plt.show()
         _, pred_label = torch.max(prob, dim=1)
         print(pred_label.size())
