@@ -81,7 +81,7 @@ class Runner(object):
                     self.validate_epoch()
 
     def infer_img(self, image):
-        image = image.astype(np.float32)
+        image = image
         print(image.shape)
         h, w, c = image.shape
         le = max(h, w)
@@ -95,7 +95,7 @@ class Runner(object):
         image = cv2.resize(image, (new_h, new_w), interpolation=cv2.INTER_AREA)
         plt.imshow(image)
         plt.show()
-        image, _ = self.infer_tf(image, np.zeros(image.shape[:2], dtype=np.float32))
+        image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
 
         prob = self.test_time_aug(image.unsqueeze(0))
         prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
