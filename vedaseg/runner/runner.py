@@ -4,6 +4,8 @@ import os.path as osp
 import torch.nn.functional as F
 import numpy as np
 from collections.abc import Iterable
+from skimage.transform import resize
+import matplotlib.pyplot as plt
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 
@@ -78,17 +80,30 @@ class Runner(object):
                     self.validate_epoch()
 
     def infer_img(self, image):
-        h, w, _ = image.shape
-        assert _ == 3
+        image = image.astype(np.float32)
+        h, w, c = image.shape
         le = max(h, w)
         factor = self.infer_size / le
-        new_le = min(self.infer_size, int(le * factor))
+        factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
+        new_h = int(h * factor)
+        new_w = int(w * factor)
+        image = resize(image, (new_h, new_w, c))
+        image, _ = self.infer_tf(image, np.zeros(image.shape[:2], dtype=np.float32))
+        print(image.size())
+        prob = self.test_time_aug(image.unsqueeze(0))
+        print()
+        _, pred_label = torch.max(prob, dim=1)
 
-        image, _ = self.infer_tf(image, np.zeros_like(image))
-        new_img = F.interpolate(image, size=(new_le, new_le), mode='bilinear', align_corners=True)
-        pred_label = self.test_time_aug(new_img)
-        pred_label = F.interpolate(pred_label, size=(le, le), mode='bilinear', align_corners=True)
-        res = pred_label.cpu().numpy()[:h, :w]
+        pred_label = pred_label.cpu().numpy()
+        print(pred_label.shape)
+        res = resize(pred_label[0, :, :], (le, le))
+        print(res.max())
+        print(res.min())
+        # pred_label = pred_label.float()
+        # pred_label = F.interpolate(pred_label.unsqueeze(0), size=(le, le), mode='bilinear', align_corners=True)
+        res = res[:h, :w]
+        plt.imshow(res)
+        plt.show()
         return res
 
     def train_epoch(self):
@@ -176,26 +191,20 @@ class Runner(object):
         logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def test_time_aug(self, img):
-        self.model.eval()
-        scales = [1.0]
-        flip = False
-        biases = [0.0]
 
+        scales, flip, biases = [1.0], False, [0.0]
+        if self.test_cfg:
+            scales = self.test_cfg.get('scales', [1.0])
+            flip = self.test_cfg.get('flip', False)
+            biases = self.test_cfg.get('bias', [0.0])
+        assert len(scales) == len(biases)
+
+        self.model.eval()
         with torch.no_grad():
             if self.gpu:
                 img = img.cuda()
 
-            if self.test_cfg:
-                scales = self.test_cfg.get('scales', [1.0])
-                flip = self.test_cfg.get('flip', False)
-                biases = self.test_cfg.get('bias', [0.0])
-
-            assert len(scales) == len(biases)
-
-            if len(img.size()) == 4:
-                n, c, h, w = img.size()
-            elif len(img.size()) == 3:
-                c, h, w = img.size()
+            n, c, h, w = img.size()
 
             probs = []
             for scale, bias in zip(scales, biases):
@@ -210,9 +219,7 @@ class Runner(object):
                     prob = flip_prob.flip(3)
                     probs.append(prob)
             prob = torch.stack(probs, dim=0).mean(dim=0)
-
-            _, pred_label = torch.max(prob, dim=1)
-        return pred_label
+        return prob
 
     def save_checkpoint(self,
                         out_dir,

@@ -40,7 +40,8 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
 
     # 1. logging
     if infer_mode:
-        cfg['logger']['handlers'] = (dict(type='StreamHandler', level='WARNING'))
+        cfg['logger']['handlers'] = (dict(type='StreamHandler', level='INFO'), )
+        cfg['workdir'] = None
     logger = build_logger(cfg['logger'], dict(workdir=cfg['workdir']))
 
     loader, infer_tf, infer_size = None, None, None

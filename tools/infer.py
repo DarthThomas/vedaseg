@@ -14,9 +14,10 @@ from vedaseg.assemble import assemble
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Use trained semantic segmenter')
-    parser.add_argument('config', help='train config file path')
-    parser.add_argument('checkpoint', help='train config file path')
-    parser.add_argument('img_dir', help='infer image path')
+    parser.add_argument('config', help='train config file path', default='configs/horc_1_50_d3p_481.py')
+    parser.add_argument('checkpoint', help='train config file path', default='checkpoints/epoch_50.pth')
+    parser.add_argument('img_dir', help='infer image path',
+                        default='/media/yuhaoye/DATA7/git/Seg_Vis/mask_ignore/JPEGImages/20191206_110208_2_3.jpg')
     args = parser.parse_args()
     return args
 
@@ -48,7 +49,7 @@ def get_contours(image, mask):
     mask_img = mask * 255
     _, thres = cv2.threshold(mask_img.astype(np.uint8), 127, 255, 0)
     contour_img = image.copy()
-    contours, _ = cv2.findContours(thres, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(thres, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(contour_img, contours, -1, (0, 255, 0), 3)
     return contour_img
 
