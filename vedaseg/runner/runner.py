@@ -4,7 +4,8 @@ import os.path as osp
 import torch.nn.functional as F
 import numpy as np
 from collections.abc import Iterable
-from skimage.transform import resize
+
+import cv2
 import matplotlib.pyplot as plt
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
@@ -87,7 +88,7 @@ class Runner(object):
         factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
         new_h = int(h * factor)
         new_w = int(w * factor)
-        image = resize(image, (new_h, new_w, c))
+        image = cv2.resize(image, (new_h, new_w), interpolation=cv2.INTER_AREA)
         image, _ = self.infer_tf(image, np.zeros(image.shape[:2], dtype=np.float32))
         print(image.size())
         prob = self.test_time_aug(image.unsqueeze(0))
@@ -95,8 +96,11 @@ class Runner(object):
         _, pred_label = torch.max(prob, dim=1)
 
         pred_label = pred_label.cpu().numpy()
+        pred_label = np.squeeze(pred_label, axis=0)
         print(pred_label.shape)
-        res = resize(pred_label[0, :, :], (le, le))
+        print(pred_label.max())
+        print(pred_label.min())
+        res = cv2.resize(pred_label, (le, le), interpolation=cv2.INTER_AREA)
         print(res.max())
         print(res.min())
         # pred_label = pred_label.float()
