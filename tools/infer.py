@@ -32,7 +32,7 @@ def main():
     runner = assemble(cfg_fp, checkpoint, infer_mode=True)
 
     prediction = runner(image=image)
-    get_plot(image, prediction, vis_mask=False, vis_contour=True)
+    get_plot(image, prediction, vis_mask=True, vis_contour=True)
 
 
 def image_overlay(image, mask, color):
