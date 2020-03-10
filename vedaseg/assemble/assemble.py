@@ -10,7 +10,7 @@ from vedaseg.models import build_model
 from vedaseg.runner import build_runner
 
 
-def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
+def assemble(cfg_fp, checkpoint='', verbose=False):
     _, fullname = os.path.split(cfg_fp)
     step = 0
 
@@ -25,18 +25,16 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
         utils.set_random_seed(seed)
 
     # 1. logging
-    if infer_mode:
-        cfg['logger']['handlers'] = (dict(type='StreamHandler', level='WARNING'), )
-        cfg['workdir'] = None
+    level = 'INFO' if verbose else 'WARNING'
+    cfg['logger']['handlers'] = (dict(type='StreamHandler', level=level), )
+    cfg['workdir'] = None
     logger = build_logger(cfg['logger'], dict(workdir=cfg['workdir']))
-
-    loader, infer_tf, infer_size = None, None, None
 
     step += 1
     logger.info(f'Assemble, Step {step}, Build Transformer')
     # 2. data
     ## 2.1 transformer
-    infer_size = cfg['net_size']
+    head_size = cfg['net_size']
     infer_tf = build_transform(cfg['data']['infer']['transforms'])
 
     step += 1
@@ -62,11 +60,10 @@ def assemble(cfg_fp, checkpoint='', test_mode=False, infer_mode=False):
             loader=loader,
             model=model,
             gpu=gpu,
-            test_cfg=cfg.get('test_cfg', None),
             test_mode=test_mode,
             infer_mode=infer_mode,
             infer_tf=infer_tf,
-            infer_size=infer_size  # TODO: read infer size from  model so that we don't need this kwarg
+            head_size=head_size  # TODO: read infer size from  model so that we don't need this kwarg
         )
     )
 
