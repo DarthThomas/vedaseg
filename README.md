@@ -1,6 +1,5 @@
 ## Introduction
-vedaseg is an open source semantic segmentation toolbox based on PyTorch.
-
+vedaseg is an open source semantic segmentation toolbox based on PyTorch. This branch aims to construct a minimal inference-only version
 ## Features
 
 - **Modular Design**
@@ -81,57 +80,17 @@ d. Install dependencies.
 pip install -r requirements.txt
 ```
 
-## Prepare data
-Download [Pascal VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar) and [Pascal VOC 2012 augmented](http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/semantic_contours/benchmark.tgz), resulting in 10,582 training images(trainaug), 1,449 validatation images.
-
-```
-cd ${vedaseg_root}
-mkdir ${vedaseg_root}/data
-cd ${vedaseg_root}/data
-
-wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
-wget http://www.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/semantic_contours/benchmark.tgz
-
-tar xf VOCtrainval_11-May-2012.tar
-tar xf benchmark.tgz
-
-python ../tools/encode_voc12_aug.py
-python ../tools/encode_voc12.py
-
-mkdir VOCdevkit/VOC2012/EncodeSegmentationClass
-#cp benchmark_RELEASE/dataset/encode_cls/* VOCdevkit/VOC2012/EncodeSegmentationClass
-(cd benchmark_RELEASE/dataset/encode_cls; cp * ${vedaseg_root}/data/VOCdevkit/VOC2012/EncodeSegmentationClass)
-#cp VOCdevkit/VOC2012/EncodeSegmentationClassPart/* VOCdevkit/VOC2012/EncodeSegmentationClass
-(cd VOCdevkit/VOC2012/EncodeSegmentationClassPart; cp * ${vedaseg_root}/data/VOCdevkit/VOC2012/EncodeSegmentationClass)
-
-comm -23 <(cat benchmark_RELEASE/dataset/{train,val}.txt VOCdevkit/VOC2012/ImageSets/Segmentation/train.txt | sort -u) <(cat VOCdevkit/VOC2012/ImageSets/Segmentation/val.txt | sort -u) > VOCdevkit/VOC2012/ImageSets/Segmentation/trainaug.txt
-```
-To avoid tedious operations, you could save the above linux commands as a shell file and execute it.
-
-## Train
-
-a. Config
-
-Modify some configuration accordingly in the config file like `configs/deeplabv3plus.py`
-
-b. Run
-
-```shell
-python tools/trainval.py configs/deeplabv3plus.py
-```
-
-Snapshots and logs will be generated at `${vedaseg_root}/workdir`.
 
 ## Test
 
 a. Config
 
-Modify some configuration accordingly in the config file like `configs/deeplabv3plus.py`
+Modify some configuration accordingly in the like `configs/horc_1_50_d3p_481.py`
 
 b. Run
 
 ```shell
-python tools/test.py configs/deeplabv3plus.py path_to_deeplabv3plus_weights
+python infer_template.py configs/horc_1_50_d3p_481.py path_to_deeplabv3plus_weights path_to_image
 ```
 
 ## Contact
