@@ -1,6 +1,3 @@
-# work dir
-root_workdir = '/DATA7_DB7/data/wsnhg/workdirs/seg/horc/1/'
-
 # seed
 seed = 0
 
@@ -15,61 +12,11 @@ logger = dict(
 # 2. data
 data_scale = 1 #234 / 451
 net_size = 481
-test_cfg = None
-# test_cfg = dict(
-#     scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
-#     bias=[0.5, 0.25, 0.0, -0.25, -0.5, -0.75],
-#     flip=True,
-# )
+
 img_norm_cfg = dict(mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375))
 ignore_label = 255
 
-dataset_type = 'VOCDataset'
-dataset_root = '/DATA7_DB7/data/wsnhg/datasets/kfc_data/processed/horc_mix_raw/horc_1_400/mask_ignore'
 data = dict(
-    train=dict(
-        dataset=dict(
-            type=dataset_type,
-            root=dataset_root,
-            imglist_name='trainaug.txt',
-        ),
-        transforms=[
-            dict(type='RandomScale', min_scale=data_scale/2, max_scale=data_scale*2, scale_step=data_scale*0.25, mode='bilinear'),
-            dict(type='RandomCrop', height=net_size, width=net_size, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
-            dict(type='HorizontalFlip', p=0.5),
-            dict(type='Normalize', **img_norm_cfg),
-            dict(type='ToTensor'),
-        ],
-        loader=dict(
-            type='DataLoader',
-            batch_size=16,
-            num_workers=4,
-            shuffle=True,
-            drop_last=True,
-            pin_memory=True,
-        ),
-    ),
-    val=dict(
-        dataset=dict(
-            type=dataset_type,
-            root=dataset_root,
-            imglist_name='val.txt',
-        ),
-        transforms=[
-            dict(type='RandomScale', min_scale=data_scale, max_scale=data_scale, mode='bilinear'),
-            dict(type='PadIfNeeded', height=net_size, width=net_size, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
-            dict(type='Normalize', **img_norm_cfg),
-            dict(type='ToTensor'),
-        ],
-        loader=dict(
-            type='DataLoader',
-            batch_size=8,
-            num_workers=4,
-            shuffle=False,
-            drop_last=False,
-            pin_memory=True,
-        ),
-    ),
     infer=dict(
         transforms=[
             dict(type='PadIfNeeded', height=net_size, width=net_size, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
@@ -150,34 +97,10 @@ model = dict(
     )
 )
 
-## 3.1 resume
-resume = None
-
-# 4. criterion
-criterion = dict(type='CrossEntropyLoss', ignore_index=ignore_label)
-
-# 5. optim
-optimizer = dict(type='SGD', lr=0.007, momentum=0.9, weight_decay=0.0001)
-
-# 6. lr scheduler
-max_epochs = 50
-lr_scheduler = dict(type='PolyLR', max_epochs=max_epochs)
-
 # 7. runner
 runner = dict(
     type='Runner',
-    max_epochs=max_epochs,
-    trainval_ratio=1,
-    snapshot_interval=5,
 )
 
 # 8. device
 gpu_id = '0'
-
-
-# 9. infer
-infer_cfg = dict(
-    tta=False,
-    save_heatmap=True,
-    save_metric=True,
-)

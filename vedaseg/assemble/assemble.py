@@ -11,9 +11,7 @@ from vedaseg.runner import build_runner
 
 
 def assemble(cfg_fp, checkpoint='', verbose=False):
-    _, fullname = os.path.split(cfg_fp)
     step = 0
-
     cfg = utils.Config.fromfile(cfg_fp)
 
     # set gpu environment
@@ -57,20 +55,15 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
     runner = build_runner(
         cfg['runner'],
         dict(
-            loader=loader,
             model=model,
             gpu=gpu,
-            test_mode=test_mode,
-            infer_mode=infer_mode,
             infer_tf=infer_tf,
             head_size=head_size  # TODO: read infer size from  model so that we don't need this kwarg
         )
     )
 
-    if test_mode or infer_mode:
-        cfg['resume'] = dict(checkpoint=checkpoint, resume_optimizer=False, resume_lr=False, resume_epoch=False)
+    cfg['resume'] = dict(checkpoint=checkpoint)
 
-    if cfg['resume']:
-        runner.resume(**cfg['resume'])
+    runner.resume(**cfg['resume'])
 
     return runner
