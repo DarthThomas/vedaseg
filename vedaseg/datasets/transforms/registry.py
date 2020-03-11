@@ -1,4 +1,4 @@
-from vedaseg.utils import Registry
+from ...utils import Registry
 
 import albumentations as albu
 

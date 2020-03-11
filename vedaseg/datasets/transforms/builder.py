@@ -1,4 +1,4 @@
-from vedaseg.utils import build_from_cfg
+from ...utils import build_from_cfg
 
 from .registry import TRANSFORMS
 

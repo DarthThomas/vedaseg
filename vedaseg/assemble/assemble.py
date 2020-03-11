@@ -3,11 +3,11 @@ import os
 import torch
 from torch import nn
 
-from vedaseg import utils
-from vedaseg.loggers import build_logger
-from vedaseg.datasets.transforms.builder import build_transform
-from vedaseg.models import build_model
-from vedaseg.runner import build_runner
+from .. import utils
+from ..loggers import build_logger
+from ..datasets.transforms.builder import build_transform
+from ..models import build_model
+from ..runner import build_runner
 
 
 def assemble(cfg_fp, checkpoint='', verbose=False):

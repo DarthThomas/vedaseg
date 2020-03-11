@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from vedaseg.utils.checkpoint import load_checkpoint
+from ..utils.checkpoint import load_checkpoint
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
