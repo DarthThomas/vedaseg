@@ -30,7 +30,7 @@ def main():
     runner = assemble(cfg_fp, checkpoint)
 
     for image_dir in tqdm(os.listdir(input_dir)):
-        image = get_image(image_dir)
+        image = get_image(os.path.join(input_dir, image_dir))
         target_dir = os.path.join(output_dir, image_dir)
         if '.jpg' in target_dir:
             target_dir = target_dir.replace('.jpg', '.png')
