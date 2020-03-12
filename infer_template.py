@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import cv2
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ def get_image(img_dir):
     return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
 
 
-def get_plot(img, pd, vis_mask=True, vis_contour=True):
+def get_plot(img, pd, vis_mask=True, vis_contour=True, save_dir=None):
     plt.figure(figsize=(8, 6))
     plt.suptitle(f'Prediction:')
     plt.tight_layout()
@@ -47,9 +48,15 @@ def get_plot(img, pd, vis_mask=True, vis_contour=True):
         img = get_contours(img, pd, [0, 255, 0])
     plt.imshow(img)
     plt.axis('off')
-
-    plt.show()
-    return plt
+    if not save_dir:
+        plt.show()
+        return plt
+    else:
+        plt.savefig(save_dir, transparent=True)
+        plt.cla()
+        plt.clf()
+        plt.close('all')
+        return None
 
 
 def image_overlay(image, mask, color):
