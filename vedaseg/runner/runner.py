@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from vedaseg.utils.checkpoint import load_checkpoint
+from ..utils.checkpoint import load_checkpoint
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
@@ -19,16 +19,14 @@ class Runner:
     """
 
     def __init__(self,
-                 loader,
                  model,
                  gpu=True,
                  infer_tf=None,
-                 infer_size=None):
-        self.loader = loader
+                 head_size=None):
         self.model = model
         self.gpu = gpu
         self.infer_tf = infer_tf
-        self.infer_size = infer_size  # TODO: read infer size from  model so that we don't need this kwarg
+        self.head_size = head_size  # TODO: read infer size from  model so that we don't need this kwarg
 
     def __call__(self, image=None):
         if isinstance(image, list):
@@ -42,11 +40,11 @@ class Runner:
     def infer_img(self, image):
         h, w, c = image.shape
         le = max(h, w)
-        factor = self.infer_size / le
-        factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.infer_size
+        factor = self.head_size / le
+        factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.head_size
         new_h = int(h * factor)
         new_w = int(w * factor)
-        # resize original image so that the long edge = self.infer_size
+        # resize original image so that the long edge = self.head_size
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
