@@ -19,7 +19,8 @@ def parse_args():
 
 def get_contours(image, mask, color):
     contour_img = image.copy()
-    _, contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    res = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours = res[1] if len(res) == 3 else res[0]
     cv2.drawContours(contour_img, contours, -1, color, 3)
     return contour_img
 
