@@ -25,6 +25,7 @@ def main():
     checkpoint = args.checkpoint
     input_dir = args.input_dir
     output_dir = args.output_sir
+    os.makedirs(output_dir, exist_ok=True)
 
     runner = assemble(cfg_fp, checkpoint)
 
