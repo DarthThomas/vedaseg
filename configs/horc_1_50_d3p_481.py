@@ -103,4 +103,4 @@ runner = dict(
 )
 
 # 8. device
-gpu_id = '0'
+gpu_id = '8'
