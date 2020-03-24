@@ -78,6 +78,7 @@ model = dict(
             arch='resnet101',
             replace_stride_with_dilation=[False, False, True],
             multi_grid=[1, 2, 4],
+            in_channels=4,
         ),
         enhance=dict(
             type='ASPP',

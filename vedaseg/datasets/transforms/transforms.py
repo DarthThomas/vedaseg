@@ -64,12 +64,12 @@ class RandomScale(object):
         new_h = int(h * scale_factor)
         new_w = int(w * scale_factor)
 
-        torch_image = torch.from_numpy(image).permute(2,0,1).unsqueeze(0)
+        torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w), mode=self.mode, align_corners=True)
         torch_mask = F.interpolate(torch_mask, size=(new_h, new_w), mode='nearest')
 
-        new_image = torch_image.squeeze().permute(1,2,0).numpy()
+        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
         new_mask = torch_mask.squeeze().numpy()
 
         return new_image, new_mask
@@ -87,9 +87,12 @@ class RandomCrop(object):
         h, w, c = image.shape
         target_height = h + max(self.height-h, 0)
         target_width = w + max(self.width-w, 0)
+        assert c == len(self.image_value)
 
-        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype), [1,1,3])
-        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype), [1,1])
+        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype),
+                                     [1, 1, len(self.image_value)])
+        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype),
+                                    [1, 1])
 
         new_image = np.tile(image_pad_value, (target_height, target_width, 1))
         new_mask = np.tile(mask_pad_value, (target_height, target_width))
@@ -122,12 +125,15 @@ class PadIfNeeded(object):
         h, w, c = image.shape
 
         assert h <= self.height and w <= self.width
+        assert c == len(self.image_value)
 
         target_height = h + max(self.height-h, 0)
         target_width = w + max(self.width-w, 0)
 
-        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype), [1,1,3])
-        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype), [1,1])
+        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype),
+                                     [1, 1, len(self.image_value)])
+        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype),
+                                    [1, 1])
 
         new_image = np.tile(image_pad_value, (target_height, target_width, 1))
         new_mask = np.tile(mask_pad_value, (target_height, target_width))
@@ -135,7 +141,7 @@ class PadIfNeeded(object):
         new_image[:h, :w, :] = image
         new_mask[:h, :w] = mask
 
-        assert np.count_nonzero(mask!=self.mask_value) == np.count_nonzero(new_mask!=self.mask_value)
+        assert np.count_nonzero(mask != self.mask_value) == np.count_nonzero(new_mask != self.mask_value)
 
         return new_image, new_mask
 
@@ -170,8 +176,14 @@ class RandomRotate(object):
             angle = random.uniform(*self.degrees)
             matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
 
-            image = cv2.warpAffine(image, M=matrix, dsize=(w,h), flags=self.mode, borderMode=self.border_mode, borderValue=self.image_value)
-            mask = cv2.warpAffine(mask, M=matrix, dsize=(w,h), flags=cv2.INTER_NEAREST, borderMode=self.border_mode, borderValue=self.mask_value)
+            image = cv2.warpAffine(image, M=matrix, dsize=(w, h),
+                                   flags=self.mode,
+                                   borderMode=self.border_mode,
+                                   borderValue=self.image_value)
+            mask = cv2.warpAffine(mask, M=matrix, dsize=(w, h),
+                                  flags=cv2.INTER_NEAREST,
+                                  borderMode=self.border_mode,
+                                  borderValue=self.mask_value)
 
         return image, mask
 
@@ -196,8 +208,8 @@ class Normalize(object):
         self.std = std
 
     def __call__(self, image, mask):
-        mean = np.reshape(np.array(self.mean, dtype=image.dtype), [1,1,3])
-        std = np.reshape(np.array(self.std, dtype=image.dtype), [1,1,3])
+        mean = np.reshape(np.array(self.mean, dtype=image.dtype), [1, 1, len(self.mean)])
+        std = np.reshape(np.array(self.std, dtype=image.dtype), [1, 1, len(self.std)])
         denominator = np.reciprocal(std, dtype=image.dtype)
 
         new_image = (image - mean) * denominator
