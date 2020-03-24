@@ -37,7 +37,6 @@ class KFCDataset(BaseDataset):
         mask = np.array(Image.open(mask_fp), dtype=np.float32)
         hc, wc, cc = img.shape
         hd, wd, cd = dep.shape
-        assert hc == hd and wc == wd
         img = np.dstack((img, dep[:, :, 0]))
         image, mask = self.process(img, mask)
         mask = mask.long()
