@@ -262,9 +262,10 @@ class ResNet(ResNetCls):
         if pretrain:
             logger.info('ResNet init weights from pretreain')
             state_dict = load_state_dict_from_url(cfg['weights_url'])
-            import pdb
-            pdb.set_trace()
-            state_dict.pop('conv1')
+            # import pdb
+            # pdb.set_trace()
+            init_weights(self.modules())
+            state_dict.pop('conv1.weight')
             self.load_state_dict(state_dict, strict=False)
         else:
             logger.info('ResNet init weights')
