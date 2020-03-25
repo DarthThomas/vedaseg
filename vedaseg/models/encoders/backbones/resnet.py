@@ -1,5 +1,6 @@
-import torch.nn as nn
 import logging
+
+import torch.nn as nn
 from torchvision.models.resnet import model_urls
 
 try:
@@ -71,7 +72,7 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, norm_layer, act_layer, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1,):
+                 base_width=64, dilation=1, ):
         super(Bottleneck, self).__init__()
         width = int(planes * (base_width / 64.)) * groups
 
@@ -134,7 +135,7 @@ class ResNetCls(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None, multi_grid=None,
-                 norm_cfg=None, act_cfg=None):
+                 norm_cfg=None, act_cfg=None, in_channels=3):
         super(ResNetCls, self).__init__()
 
         if norm_cfg is None:
@@ -157,7 +158,7 @@ class ResNetCls(nn.Module):
 
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(in_channels, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
         self.bn1 = self._norm_layer(self.inplanes)
         self.relu1 = self._act_layer(self.inplanes)
@@ -212,12 +213,12 @@ class ResNetCls(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, norm_layer, act_layer,
                             stride, downsample, self.groups,
-                            self.base_width, previous_dilation*multi_grid[0]))
+                            self.base_width, previous_dilation * multi_grid[0]))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes, norm_layer=norm_layer, act_layer=act_layer,
                                 groups=self.groups,
-                                base_width=self.base_width, dilation=self.dilation*multi_grid[i],))
+                                base_width=self.base_width, dilation=self.dilation * multi_grid[i], ))
 
         return nn.Sequential(*layers)
 
@@ -246,8 +247,9 @@ class ResNet(ResNetCls):
     Args:
         pretrain(bool)
     """
+
     def __init__(self, arch, replace_stride_with_dilation=None, multi_grid=None, pretrain=True,
-                 norm_cfg=None, act_cfg=None):
+                 norm_cfg=None, act_cfg=None, in_channels=3):
         cfg = MODEL_CFGS[arch]
         super().__init__(
             cfg['block'],
@@ -255,11 +257,14 @@ class ResNet(ResNetCls):
             replace_stride_with_dilation=replace_stride_with_dilation,
             multi_grid=multi_grid,
             norm_cfg=norm_cfg,
-            act_cfg=act_cfg)
+            act_cfg=act_cfg,
+            in_channels=in_channels)
 
         if pretrain:
             logger.info('ResNet init weights from pretreain')
             state_dict = load_state_dict_from_url(cfg['weights_url'])
+            init_weights(self.modules())
+            state_dict.pop('conv1.weight')
             self.load_state_dict(state_dict, strict=False)
         else:
             logger.info('ResNet init weights')
@@ -285,8 +290,5 @@ class ResNet(ResNetCls):
         feats['c4'] = x3
         x4 = self.layer4(x3)  # 32
         feats['c5'] = x4
-
-        #for k, v in feats.items():
-        #    print(k, v.shape)
 
         return feats
