@@ -1,5 +1,6 @@
-import torch.nn as nn
 import logging
+
+import torch.nn as nn
 from torchvision.models.resnet import model_urls
 
 try:
@@ -262,11 +263,11 @@ class ResNet(ResNetCls):
         if pretrain:
             logger.info('ResNet init weights from pretreain')
             state_dict = load_state_dict_from_url(cfg['weights_url'])
-            # import pdb
-            # pdb.set_trace()
-            init_weights(self.modules())
-            state_dict.pop('conv1.weight')
+            if in_channels != 3:
+                state_dict.pop('conv1.weight')
             self.load_state_dict(state_dict, strict=False)
+            if in_channels != 3:
+                init_weights(self.modules().conv1)
         else:
             logger.info('ResNet init weights')
             init_weights(self.modules())
