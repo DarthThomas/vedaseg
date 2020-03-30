@@ -267,6 +267,8 @@ class ResNet(ResNetCls):
                 state_dict.pop('conv1.weight')
             self.load_state_dict(state_dict, strict=False)
             if in_channels != 3:
+                import pdb
+                pdb.set_trace()
                 init_weights(self.modules().conv1.weight)
         else:
             logger.info('ResNet init weights')
