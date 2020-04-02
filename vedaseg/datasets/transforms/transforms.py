@@ -22,7 +22,7 @@ CV2_BORDER_MODE = {
 }
 
 
-class Compose(object):
+class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -32,47 +32,58 @@ class Compose(object):
         return image, mask
 
 
-def rescale(image, mask, scale_factor, mode='bilinear'):
-    h, w, c = image.shape
+@TRANSFORMS.register_module
+class FactorScale:
+    def __init__(self, scale_factor=1.0, mode='bilinear'):
+        self.mode = mode
+        self.scale_factor = scale_factor
 
-    if scale_factor == 1.0:
-        return image, mask
+    def rescale(self, image, mask):
+        h, w, c = image.shape
 
-    new_h = int(h * scale_factor)
-    new_w = int(w * scale_factor)
+        if self.scale_factor == 1.0:
+            return image, mask
 
-    torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
-    torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
-    torch_image = F.interpolate(torch_image, size=(new_h, new_w), mode=mode, align_corners=True)
-    torch_mask = F.interpolate(torch_mask, size=(new_h, new_w), mode='nearest')
+        new_h = int(h * self.scale_factor)
+        new_w = int(w * self.scale_factor)
 
-    new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
-    new_mask = torch_mask.squeeze().numpy()
+        torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+        torch_image = F.interpolate(torch_image, size=(new_h, new_w),
+                                    mode=self.mode, align_corners=True)
+        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
+                                   mode='nearest')
 
-    return new_image, new_mask
+        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
+        new_mask = torch_mask.squeeze().numpy()
+
+        return new_image, new_mask
+
+    def __call__(self, image, mask):
+        return self.rescale(image, mask)
 
 
 @TRANSFORMS.register_module
-class ReScale:
+class SizeScale(FactorScale):
     def __init__(self, target_size, mode='bilinear'):
         self.target_size = target_size
-        self.mode = mode
+        super().__init__(mode=mode)
 
     def __call__(self, image, mask):
         h, w, _ = image.shape
         long_edge = max(h, w)
-        scale_factor = self.target_size / long_edge
+        self.scale_factor = self.target_size / long_edge
 
-        return rescale(image, mask, scale_factor, mode=self.mode)
+        return self.rescale(image, mask)
 
 
 @TRANSFORMS.register_module
-class RandomScale(object):
+class RandomScale(FactorScale):
     def __init__(self, min_scale, max_scale, scale_step=0.0, mode='bilinear'):
         self.min_scale = min_scale
         self.max_scale = max_scale
         self.scale_step = scale_step
-        self.mode = mode
+        super().__init__(mode=mode)
 
     @staticmethod
     def get_scale_factor(min_scale, max_scale, scale_step):
@@ -89,12 +100,12 @@ class RandomScale(object):
         return scale_factor
 
     def __call__(self, image, mask):
-        scale_factor = self.get_scale_factor(self.min_scale, self.max_scale, self.scale_step)
-        return rescale(image, mask, scale_factor, mode=self.mode)
+        self.scale_factor = self.get_scale_factor(self.min_scale, self.max_scale, self.scale_step)
+        return self.rescale(image, mask)
 
 
 @TRANSFORMS.register_module
-class RandomCrop(object):
+class RandomCrop:
     def __init__(self, height, width, image_value, mask_value):
         self.height = height
         self.width = width
@@ -130,7 +141,7 @@ class RandomCrop(object):
 
 
 @TRANSFORMS.register_module
-class PadIfNeeded(object):
+class PadIfNeeded:
     def __init__(self, height, width, image_value, mask_value):
         self.height = height
         self.width = width
@@ -161,7 +172,7 @@ class PadIfNeeded(object):
 
 
 @TRANSFORMS.register_module
-class HorizontalFlip(object):
+class HorizontalFlip:
     def __init__(self, p=0.5):
         self.p = p
 
@@ -174,7 +185,7 @@ class HorizontalFlip(object):
 
 
 @TRANSFORMS.register_module
-class RandomRotate(object):
+class RandomRotate:
     def __init__(self, p=0.5, degrees=30, mode='bilinear', border_mode='reflect101', image_value=None, mask_value=None):
         self.p = p
         self.degrees = (-degrees, degrees) if isinstance(degrees, (int, float)) else degrees
@@ -199,7 +210,7 @@ class RandomRotate(object):
 
 
 @TRANSFORMS.register_module
-class GaussianBlur(object):
+class GaussianBlur:
     def __init__(self, p=0.5, ksize=7):
         self.p = p
         self.ksize = (ksize, ksize) if isinstance(ksize, int) else ksize
@@ -212,7 +223,7 @@ class GaussianBlur(object):
 
 
 @TRANSFORMS.register_module
-class Normalize(object):
+class Normalize:
     def __init__(self, mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375)):
         self.mean = mean
         self.std = std
@@ -230,7 +241,7 @@ class Normalize(object):
 
 
 @TRANSFORMS.register_module
-class ToTensor(object):
+class ToTensor:
     def __call__(self, image, mask):
         image = torch.from_numpy(image).permute(2, 0, 1)
         mask = torch.from_numpy(mask)
