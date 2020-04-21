@@ -5,7 +5,7 @@ import cv2
 from tqdm import tqdm
 
 from infer_template import get_image, get_plot
-from vedaseg.assemble import assemble
+from vedaseg.assembler import assemble
 
 
 def parse_args():

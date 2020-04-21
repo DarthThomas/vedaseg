@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from ..utils.checkpoint import load_checkpoint
 from .registry import RUNNERS
+from ..utils.checkpoint import load_checkpoint
 
 np.set_printoptions(precision=4)
 logger = logging.getLogger()
@@ -37,11 +37,13 @@ class Runner:
             res = self.infer_img(image)
         return res
 
+    def infer_batch(self, images):
+        pass
+
     def infer_img(self, image):
         h, w, c = image.shape
         le = max(h, w)
         factor = self.head_size / le
-        factor = factor // 0.0001 * 0.0001  # make sure that new image won't be larger than self.head_size
         new_h = int(h * factor)
         new_w = int(w * factor)
         # resize original image so that the long edge = self.head_size

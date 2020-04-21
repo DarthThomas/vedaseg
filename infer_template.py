@@ -4,7 +4,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from vedaseg.assemble import assemble
+from vedaseg.assembler import assemble
 
 
 def parse_args():

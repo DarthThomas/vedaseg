@@ -4,8 +4,8 @@ import torch
 from torch import nn
 
 from .. import utils
-from ..loggers import build_logger
 from ..datasets.transforms.builder import build_transform
+from ..loggers import build_logger
 from ..models import build_model
 from ..runner import build_runner
 
@@ -24,7 +24,7 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
 
     # 1. logging
     level = 'INFO' if verbose else 'WARNING'
-    cfg['logger']['handlers'] = (dict(type='StreamHandler', level=level), )
+    cfg['logger']['handlers'] = (dict(type='StreamHandler', level=level),)
     cfg['workdir'] = None
     logger = build_logger(cfg['logger'], dict(workdir=cfg['workdir']))
 
@@ -51,14 +51,14 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
 
     step += 1
     logger.info(f'Assemble, Step {step}, Build Runner')
-    # 7. runner
+    # 4. runner
     runner = build_runner(
         cfg['runner'],
         dict(
             model=model,
             gpu=gpu,
             infer_tf=infer_tf,
-            head_size=head_size  # TODO: read infer size from  model so that we don't need this kwarg
+            head_size=head_size  # TODO: read head_size from model so that we don't need this kwarg
         )
     )
 
