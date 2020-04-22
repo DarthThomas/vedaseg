@@ -1,4 +1,6 @@
+# import logging
 import random
+from copy import deepcopy
 
 import cv2
 import numpy as np
@@ -7,6 +9,7 @@ import torch.nn.functional as F
 import torchvision.transforms as tt
 from PIL import Image
 
+from .base import BaseTransform
 from .registry import TRANSFORMS
 
 CV2_MODE = {
@@ -24,45 +27,87 @@ CV2_BORDER_MODE = {
 }
 
 
+# logger = logging.getLogger()
+
+
 class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, image, mask):
-        for t in self.transforms:
-            image, mask = t(image, mask)
-        return image, mask
+    def __call__(self, **kwargs):  # image, mask, detail, inverse=False
+        state = deepcopy(kwargs)
+        inverse = kwargs.get("inverse", False)
+        if inverse:
+            details = state.pop('details', None)
+            assert details is not None, "Details not provided for inverse " \
+                                        "transform."
+            transforms = reversed(self.transforms)
+            details = reversed(details)
+            for t, detail in zip(transforms, details):
+                state.update({'details': detail})
+                state = t(**state)
+            return self.unpack(state)
+        else:
+            details = state.get('details', [])
+            assert len(details) == 0, f"Should start recording with an empty" \
+                                      f" list while list {details} with " \
+                                      f"length '{len(details)}' provided."
+            transforms = self.transforms
+            for t in transforms:
+                state = t(**state)
+            return self.unpack(state)
+
+    @staticmethod
+    def unpack(state):
+        res = []
+        for key in ['image', 'mask', 'details']:
+            if state.get(key, None) is not None:
+                res.append(state[key])
+        if len(res) == 1:
+            return res[0]
+        return res
 
 
 @TRANSFORMS.register_module
-class FactorScale:
+class FactorScale(BaseTransform):
     def __init__(self, scale_factor=1.0, mode='bilinear'):
+        super().__init__()
         self.mode = mode
         self.scale_factor = scale_factor
 
-    def rescale(self, image, mask):
-        h, w, c = image.shape
-
+    def mask_forward(self, mask):
         if self.scale_factor == 1.0:
-            return image, mask
+            return mask
+
+        new_h = int(mask.shape[0] * self.scale_factor)
+        new_w = int(mask.shape[1] * self.scale_factor)
+
+        self.transform_detail.update({'shape_orig': mask.shape[:2]})
+
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
+                                   mode='nearest')
+        new_mask = torch_mask.squeeze().numpy()
+
+        return new_mask
+
+    def image_forward(self, image):
+        if self.scale_factor == 1.0:
+            return image
+
+        h, w, c = image.shape
 
         new_h = int(h * self.scale_factor)
         new_w = int(w * self.scale_factor)
 
+        self.transform_detail.update({'shape_orig': image.shape[:2]})
+
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
-        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w),
                                     mode=self.mode, align_corners=True)
-        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
-                                   mode='nearest')
-
         new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
-        new_mask = torch_mask.squeeze().numpy()
 
-        return new_image, new_mask
-
-    def __call__(self, image, mask):
-        return self.rescale(image, mask)
+        return new_image
 
 
 @TRANSFORMS.register_module
@@ -71,7 +116,7 @@ class SizeScale(FactorScale):
         self.target_size = target_size
         super().__init__(mode=mode)
 
-    def __call__(self, image, mask):
+    def __call__(self, image, mask=None):
         h, w, _ = image.shape
         long_edge = max(h, w)
         self.scale_factor = self.target_size / long_edge
@@ -101,8 +146,10 @@ class RandomScale(FactorScale):
 
         return scale_factor
 
-    def __call__(self, image, mask):
-        self.scale_factor = self.get_scale_factor(self.min_scale, self.max_scale, self.scale_step)
+    def __call__(self, image, mask=None):
+        self.scale_factor = self.get_scale_factor(self.min_scale,
+                                                  self.max_scale,
+                                                  self.scale_step)
         return self.rescale(image, mask)
 
 
@@ -120,8 +167,12 @@ class RandomCrop:
         target_height = h + max(self.height - h, 0)
         target_width = w + max(self.width - w, 0)
 
-        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype), [1, 1, self.channel])
-        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype), [1, 1])
+        image_pad_value = np.reshape(np.array(self.image_value,
+                                              dtype=image.dtype),
+                                     [1, 1, self.channel])
+        mask_pad_value = np.reshape(np.array(self.mask_value,
+                                             dtype=mask.dtype),
+                                    [1, 1])
 
         new_image = np.tile(image_pad_value, (target_height, target_width, 1))
         new_mask = np.tile(mask_pad_value, (target_height, target_width))
@@ -159,8 +210,12 @@ class PadIfNeeded:
         target_height = h + max(self.height - h, 0)
         target_width = w + max(self.width - w, 0)
 
-        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype), [1, 1, self.channel])
-        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype), [1, 1])
+        image_pad_value = np.reshape(np.array(self.image_value,
+                                              dtype=image.dtype),
+                                     [1, 1, self.channel])
+        mask_pad_value = np.reshape(np.array(self.mask_value,
+                                             dtype=mask.dtype),
+                                    [1, 1])
 
         new_image = np.tile(image_pad_value, (target_height, target_width, 1))
         new_mask = np.tile(mask_pad_value, (target_height, target_width))
@@ -188,7 +243,13 @@ class HorizontalFlip:
 
 @TRANSFORMS.register_module
 class RandomRotate:
-    def __init__(self, p=0.5, degrees=30, mode='bilinear', border_mode='reflect101', image_value=None, mask_value=None):
+    def __init__(self,
+                 p=0.5,
+                 degrees=30,
+                 mode='bilinear',
+                 border_mode='reflect101',
+                 image_value=None,
+                 mask_value=None):
         self.p = p
         self.degrees = (-degrees, degrees) if isinstance(degrees, (int, float)) else degrees
         self.mode = CV2_MODE[mode]
@@ -203,9 +264,17 @@ class RandomRotate:
             angle = random.uniform(*self.degrees)
             matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
 
-            image = cv2.warpAffine(image, M=matrix, dsize=(w, h), flags=self.mode, borderMode=self.border_mode,
+            image = cv2.warpAffine(image,
+                                   M=matrix,
+                                   dsize=(w, h),
+                                   flags=self.mode,
+                                   borderMode=self.border_mode,
                                    borderValue=self.image_value)
-            mask = cv2.warpAffine(mask, M=matrix, dsize=(w, h), flags=cv2.INTER_NEAREST, borderMode=self.border_mode,
+            mask = cv2.warpAffine(mask,
+                                  M=matrix,
+                                  dsize=(w, h),
+                                  flags=cv2.INTER_NEAREST,
+                                  borderMode=self.border_mode,
                                   borderValue=self.mask_value)
 
         return image, mask
@@ -226,14 +295,18 @@ class GaussianBlur:
 
 @TRANSFORMS.register_module
 class Normalize:
-    def __init__(self, mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375)):
+    def __init__(self,
+                 mean=(123.675, 116.280, 103.530),
+                 std=(58.395, 57.120, 57.375)):
         self.mean = mean
         self.std = std
         self.channel = len(mean)
 
     def __call__(self, image, mask):
-        mean = np.reshape(np.array(self.mean, dtype=image.dtype), [1, 1, self.channel])
-        std = np.reshape(np.array(self.std, dtype=image.dtype), [1, 1, self.channel])
+        mean = np.reshape(np.array(self.mean, dtype=image.dtype),
+                          [1, 1, self.channel])
+        std = np.reshape(np.array(self.std, dtype=image.dtype),
+                         [1, 1, self.channel])
         denominator = np.reciprocal(std, dtype=image.dtype)
 
         new_image = (image - mean) * denominator
