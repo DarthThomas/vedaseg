@@ -49,7 +49,8 @@ class Runner:
         # resize original image so that the long edge = self.head_size
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
-        image, _ = self.infer_tf(image.astype(np.float32), np.zeros(image.shape[:2], dtype=np.float32))
+        image, _ = self.infer_tf(image.astype(np.float32),
+                                 np.zeros(image.shape[:2], dtype=np.float32))
         self.model.eval()
         with torch.no_grad():
             if self.gpu:
