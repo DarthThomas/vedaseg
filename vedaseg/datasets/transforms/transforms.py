@@ -75,37 +75,16 @@ class FactorScale(BaseTransform):
         self.scale_factor = scale_factor
 
     @staticmethod
-    def scale_factor_check(scale_factor):
+    def check_scale_factor(scale_factor):
         if scale_factor == 0:
             raise ValueError('Encountered zero scale factor.')
         if scale_factor < 0.01 or scale_factor > 100:
             logger.warning(f"Encountered scale change larger than 100 "
                            f"with scale factor: {scale_factor}.")
 
-    def mask_forward(self, mask, **kwargs):
-        scale_factor = kwargs.get('scale_factor', self.scale_factor)
-        self.scale_factor_check(scale_factor)
-
-        if scale_factor == 1.0:
-            return mask
-
-        new_h = int(mask.shape[0] * scale_factor)
-        new_w = int(mask.shape[1] * scale_factor)
-
-        if kwargs.get('details', None) is not None:
-            self.transform_detail.update({'shape_orig': mask.shape[:2],
-                                          'scale_factor': self.scale_factor})
-
-        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
-        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
-                                   mode='nearest')
-        new_mask = torch_mask.squeeze().numpy()
-
-        return new_mask
-
     def image_forward(self, image, **kwargs):
         scale_factor = kwargs.get('scale_factor', self.scale_factor)
-        self.scale_factor_check(scale_factor)
+        self.check_scale_factor(scale_factor)
 
         if scale_factor == 1.0:
             return image
@@ -114,8 +93,9 @@ class FactorScale(BaseTransform):
         new_w = int(image.shape[1] * scale_factor)
 
         if kwargs.get('details', None) is not None:
-            self.transform_detail.update({'shape_orig': image.shape[:2],
-                                          'scale_factor': self.scale_factor})
+            info = {'shape_orig': image.shape[:2],
+                    'scale_factor': self.scale_factor}
+            self.transform_detail['image'].update(info)
 
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w),
@@ -124,20 +104,38 @@ class FactorScale(BaseTransform):
 
         return new_image
 
-    def image_inverse(self, image, **kwargs):
-        detail = kwargs.get('details', None)
-        assert detail is not None, 'No detail provided to inverse scale'
-        scale_factor = detail.get('scale_factor', 0)
-        self.scale_factor_check(scale_factor)
+    def mask_forward(self, mask, **kwargs):
+        scale_factor = kwargs.get('scale_factor', self.scale_factor)
+        self.check_scale_factor(scale_factor)
 
+        if scale_factor == 1.0:
+            return mask
+
+        new_h = int(mask.shape[0] * scale_factor)
+        new_w = int(mask.shape[1] * scale_factor)
+
+        if kwargs.get('details', None) is not None:
+            info = {'shape_orig': mask.shape[:2],
+                    'scale_factor': self.scale_factor}
+            self.transform_detail['mask'].update(info)
+
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
+                                   mode='nearest')
+        new_mask = torch_mask.squeeze().numpy()
+
+        return new_mask
+
+    def image_inverse(self, image, **kwargs):
+        detail = self.load_detail(target='image', **kwargs)
+        scale_factor = detail.get('scale_factor', 0)
+        self.check_scale_factor(scale_factor)
         self.image_forward(image, scale_factor=1.0 / scale_factor)
 
     def mask_inverse(self, mask, **kwargs):
-        detail = kwargs.get('details', None)
-        assert detail is not None, 'No detail provided to inverse scale'
+        detail = self.load_detail(target='mask', **kwargs)
         scale_factor = detail.get('scale_factor', 0)
-        self.scale_factor_check(scale_factor)
-
+        self.check_scale_factor(scale_factor)
         self.image_forward(mask, scale_factor=1.0 / scale_factor)
 
 
@@ -147,12 +145,16 @@ class SizeScale(FactorScale):
         self.target_size = target_size
         super().__init__(mode=mode)
 
-    def __call__(self, image, mask=None):
-        h, w, _ = image.shape
-        long_edge = max(h, w)
+    def get_scale_factor(self, long_edge):
         self.scale_factor = self.target_size / long_edge
 
-        return self.rescale(image, mask)
+    def image_forward(self, image, **kwargs):
+        self.get_scale_factor(max(image.shape[:2]))
+        super().image_forward(image, **kwargs)
+
+    def mask_forward(self, mask, **kwargs):
+        self.get_scale_factor(max(mask.shape[:2]))
+        super().mask_forward(mask, **kwargs)
 
 
 @TRANSFORMS.register_module
@@ -177,64 +179,24 @@ class RandomScale(FactorScale):
 
         return scale_factor
 
-    def __call__(self, image, mask=None):
+    def update_params(self, ):
         self.scale_factor = self.get_scale_factor(self.min_scale,
                                                   self.max_scale,
                                                   self.scale_step)
-        return self.rescale(image, mask)
 
 
 @TRANSFORMS.register_module
-class RandomCrop:
+class PadIfNeeded(BaseTransform):
     def __init__(self, height, width, image_value, mask_value):
         self.height = height
         self.width = width
         self.image_value = image_value
         self.mask_value = mask_value
         self.channel = len(image_value)
+        super().__init__()
 
-    def __call__(self, image, mask):
-        h, w, c = image.shape
-        target_height = h + max(self.height - h, 0)
-        target_width = w + max(self.width - w, 0)
-
-        image_pad_value = np.reshape(np.array(self.image_value,
-                                              dtype=image.dtype),
-                                     [1, 1, self.channel])
-        mask_pad_value = np.reshape(np.array(self.mask_value,
-                                             dtype=mask.dtype),
-                                    [1, 1])
-
-        new_image = np.tile(image_pad_value, (target_height, target_width, 1))
-        new_mask = np.tile(mask_pad_value, (target_height, target_width))
-
-        new_image[:h, :w, :] = image
-        new_mask[:h, :w] = mask
-
-        assert np.count_nonzero(mask != self.mask_value) == np.count_nonzero(new_mask != self.mask_value)
-
-        y1 = int(random.uniform(0, target_height - self.height + 1))
-        y2 = y1 + self.height
-        x1 = int(random.uniform(0, target_width - self.width + 1))
-        x2 = x1 + self.width
-
-        new_image = new_image[y1:y2, x1:x2, :]
-        new_mask = new_mask[y1:y2, x1:x2]
-
-        return new_image, new_mask
-
-
-@TRANSFORMS.register_module
-class PadIfNeeded:
-    def __init__(self, height, width, image_value, mask_value):
-        self.height = height
-        self.width = width
-        self.image_value = image_value
-        self.mask_value = mask_value
-        self.channel = len(image_value)
-
-    def __call__(self, image, mask):
-        h, w, c = image.shape
+    def image_forward(self, image, **kwargs):
+        h, w = image.shape[:2]
 
         assert h <= self.height and w <= self.width
 
@@ -244,19 +206,134 @@ class PadIfNeeded:
         image_pad_value = np.reshape(np.array(self.image_value,
                                               dtype=image.dtype),
                                      [1, 1, self.channel])
+
+        new_image = np.tile(image_pad_value, (target_height, target_width, 1))
+
+        new_image[:h, :w, :] = image
+        if kwargs.get('details', None) is not None:
+            self.transform_detail['image'] = {'shape_orig': image.shape[:2]}
+
+        return new_image
+
+    def mask_forward(self, mask, **kwargs):
+        h, w = mask.shape[:2]
+
+        assert h <= self.height and w <= self.width
+
+        target_height = h + max(self.height - h, 0)
+        target_width = w + max(self.width - w, 0)
+
         mask_pad_value = np.reshape(np.array(self.mask_value,
                                              dtype=mask.dtype),
                                     [1, 1])
 
-        new_image = np.tile(image_pad_value, (target_height, target_width, 1))
         new_mask = np.tile(mask_pad_value, (target_height, target_width))
 
-        new_image[:h, :w, :] = image
         new_mask[:h, :w] = mask
+        if kwargs.get('details', None) is not None:
+            self.transform_detail['mask'] = {'shape_orig': mask.shape[:2]}
+        return new_mask
 
-        assert np.count_nonzero(mask != self.mask_value) == np.count_nonzero(new_mask != self.mask_value)
+    def image_inverse(self, image, **kwargs):
+        detail = self.load_detail(target='image', **kwargs)
 
-        return new_image, new_mask
+        shape = detail.get('shape_orig', None)
+        assert shape is not None, 'No detail provided for inverse transform'
+        h, w = shape
+        return image[:h, :w, :]
+
+    def mask_inverse(self, mask, **kwargs):
+        detail = self.load_detail(target='mask', **kwargs)
+
+        shape = detail.get('shape_orig', None)
+        assert shape is not None, 'No detail provided for inverse transform'
+        h, w = shape
+        return mask[:h, :w]
+
+
+@TRANSFORMS.register_module
+class RandomCrop(PadIfNeeded):
+    def __init__(self, height, width, image_value, mask_value):
+        self.height = height
+        self.width = width
+        self.image_value = image_value
+        self.mask_value = mask_value
+        self.channel = len(image_value)
+        self.crop_info = None
+        super().__init__()
+
+    def get_crop_info(self, image):
+        h, w = image.shape[:2]
+        target_height = h + max(self.height - h, 0)
+        target_width = w + max(self.width - w, 0)
+        y1 = int(random.uniform(0, target_height - self.height + 1))
+        y2 = y1 + self.height
+        x1 = int(random.uniform(0, target_width - self.width + 1))
+        x2 = x1 + self.width
+        self.crop_info = (y1, y2, x1, x2)
+
+    def update_params(self, **kwargs):
+        image = kwargs.get('image', None)
+        mask = kwargs.get('mask', None)
+        if image is not None:
+            self.get_crop_info(image)
+        elif mask is not None:
+            self.get_crop_info(mask)
+        else:
+            raise ValueError('Neither image or mask was provided')
+
+    def image_forward(self, image, **kwargs):
+        y1, y2, x1, x2 = self.crop_info
+        padded = super().image_forward(image, **kwargs)
+        new_image = padded[y1:y2, x1:x2, :]
+        if kwargs.get('details', None) is not None:
+            info = {'shape_padded': image.shape[:2],
+                    'crop_info': self.crop_info}
+            self.transform_detail['image'].update(info)
+        return new_image
+
+    def mask_forward(self, mask, **kwargs):
+        y1, y2, x1, x2 = self.crop_info
+        padded = super().mask_forward(mask, **kwargs)
+        new_mask = padded[y1:y2, x1:x2]
+        if kwargs.get('details', None) is not None:
+            info = {'shape_padded': mask.shape[:2],
+                    'crop_info': self.crop_info}
+            self.transform_detail['mask'].update(info)
+        return new_mask
+
+    def image_inverse(self, image, **kwargs):
+        detail = self.load_detail(target='image', **kwargs)
+        image_pad_value = np.reshape(np.array(self.image_value,
+                                              dtype=image.dtype),
+                                     [1, 1, self.channel])
+        shape = detail.get('shape_padded', None)
+        crop_info = detail.get('crop_info', None)
+        for _ in [shape, crop_info]:
+            assert _ is not None, 'No padded shape provided for inverse ' \
+                                  'transform'
+        h, w = shape
+        y1, y2, x1, x2 = crop_info
+        padded = np.tile(image_pad_value, (h, w, 1))
+        padded[y1:y2, x1:x2, :] = image
+        return padded
+
+    def mask_inverse(self, mask, **kwargs):
+        detail = self.load_detail(target='mask', **kwargs)
+        mask_pad_value = np.reshape(np.array(self.mask_value,
+                                             dtype=mask.dtype),
+                                    [1, 1])
+        shape = detail.get('shape_padded', None)
+        crop_info = detail.get('crop_info', None)
+        for _ in [shape, crop_info]:
+            assert _ is not None, 'No padded shape provided for inverse ' \
+                                  'transform'
+        h, w = shape
+        y1, y2, x1, x2 = crop_info
+
+        padded = np.tile(mask_pad_value, (h, w))
+        padded[y1:y2, x1:x2] = mask
+        return padded
 
 
 @TRANSFORMS.register_module
