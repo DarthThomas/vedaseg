@@ -34,12 +34,12 @@ class Compose:
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, **kwargs):  # image, mask, detail, reverse=False
+    def __call__(self, **kwargs):  # image, mask, detail, inverse=False
         state = deepcopy(kwargs)
-        reverse = kwargs.get("reverse", False)
-        if reverse:
+        inverse = kwargs.get("inverse", False)
+        if inverse:
             details = state.pop('details', None)
-            assert details is not None, "Details not provided for reverse " \
+            assert details is not None, "Details not provided for inverse " \
                                         "transform."
             transforms = reversed(self.transforms)
             details = reversed(details)
@@ -75,7 +75,7 @@ class FactorScale(BaseTransform):
         self.mode = mode
         self.scale_factor = scale_factor
 
-    def mask_apply(self, mask):
+    def mask_forward(self, mask):
         if self.scale_factor == 1.0:
             return mask
 
@@ -91,7 +91,7 @@ class FactorScale(BaseTransform):
 
         return new_mask
 
-    def image_apply(self, image):
+    def image_forward(self, image):
         if self.scale_factor == 1.0:
             return image
 
