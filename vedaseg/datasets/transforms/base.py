@@ -64,17 +64,17 @@ class BaseTransform:
     def image_forward(self, image, **kwargs):
         return image
 
-    def image_inverse(self, mask, **kwargs):
-        return mask
-
-    def mask_inverse(self, image, **kwargs):
+    def image_inverse(self, image, **kwargs):
         return image
+
+    def mask_inverse(self, mask, **kwargs):
+        return mask
 
     def update_params(self):
         pass
 
-    def reverse_params(self):
-        pass
-
-    def forward_params(self):
-        pass
+    # def reverse_params(self):
+    #     pass
+    #
+    # def forward_params(self):
+    #     pass

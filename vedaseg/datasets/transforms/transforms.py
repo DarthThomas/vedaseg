@@ -1,4 +1,4 @@
-# import logging
+import logging
 import random
 from copy import deepcopy
 
@@ -26,8 +26,7 @@ CV2_BORDER_MODE = {
     'replicate': cv2.BORDER_REPLICATE,
 }
 
-
-# logger = logging.getLogger()
+logger = logging.getLogger()
 
 
 class Compose:
@@ -75,14 +74,27 @@ class FactorScale(BaseTransform):
         self.mode = mode
         self.scale_factor = scale_factor
 
-    def mask_forward(self, mask):
-        if self.scale_factor == 1.0:
+    @staticmethod
+    def scale_factor_check(scale_factor):
+        if scale_factor == 0:
+            raise ValueError('Encountered zero scale factor.')
+        if scale_factor < 0.01 or scale_factor > 100:
+            logger.warning(f"Encountered scale change larger than 100 "
+                           f"with scale factor: {scale_factor}.")
+
+    def mask_forward(self, mask, **kwargs):
+        scale_factor = kwargs.get('scale_factor', self.scale_factor)
+        self.scale_factor_check(scale_factor)
+
+        if scale_factor == 1.0:
             return mask
 
-        new_h = int(mask.shape[0] * self.scale_factor)
-        new_w = int(mask.shape[1] * self.scale_factor)
+        new_h = int(mask.shape[0] * scale_factor)
+        new_w = int(mask.shape[1] * scale_factor)
 
-        self.transform_detail.update({'shape_orig': mask.shape[:2]})
+        if kwargs.get('details', None) is not None:
+            self.transform_detail.update({'shape_orig': mask.shape[:2],
+                                          'scale_factor': self.scale_factor})
 
         torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
@@ -91,16 +103,19 @@ class FactorScale(BaseTransform):
 
         return new_mask
 
-    def image_forward(self, image):
-        if self.scale_factor == 1.0:
+    def image_forward(self, image, **kwargs):
+        scale_factor = kwargs.get('scale_factor', self.scale_factor)
+        self.scale_factor_check(scale_factor)
+
+        if scale_factor == 1.0:
             return image
 
-        h, w, c = image.shape
+        new_h = int(image.shape[0] * scale_factor)
+        new_w = int(image.shape[1] * scale_factor)
 
-        new_h = int(h * self.scale_factor)
-        new_w = int(w * self.scale_factor)
-
-        self.transform_detail.update({'shape_orig': image.shape[:2]})
+        if kwargs.get('details', None) is not None:
+            self.transform_detail.update({'shape_orig': image.shape[:2],
+                                          'scale_factor': self.scale_factor})
 
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w),
@@ -108,6 +123,22 @@ class FactorScale(BaseTransform):
         new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
 
         return new_image
+
+    def image_inverse(self, image, **kwargs):
+        detail = kwargs.get('details', None)
+        assert detail is not None, 'No detail provided to inverse scale'
+        scale_factor = detail.get('scale_factor', 0)
+        self.scale_factor_check(scale_factor)
+
+        self.image_forward(image, scale_factor=1.0 / scale_factor)
+
+    def mask_inverse(self, mask, **kwargs):
+        detail = kwargs.get('details', None)
+        assert detail is not None, 'No detail provided to inverse scale'
+        scale_factor = detail.get('scale_factor', 0)
+        self.scale_factor_check(scale_factor)
+
+        self.image_forward(mask, scale_factor=1.0 / scale_factor)
 
 
 @TRANSFORMS.register_module
