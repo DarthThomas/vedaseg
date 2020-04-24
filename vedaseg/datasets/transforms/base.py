@@ -62,16 +62,16 @@ class BaseTransform:
             "mask_inverse": self.mask_inverse,
         }
 
-    def image_forward(self, image, **kwargs):
+    def image_forward(self, image, details=None):
         return image
 
-    def mask_forward(self, mask, **kwargs):
+    def mask_forward(self, mask, details=None):
         return mask
 
-    def image_inverse(self, image, **kwargs):
+    def image_inverse(self, image, details=None):
         return image
 
-    def mask_inverse(self, mask, **kwargs):
+    def mask_inverse(self, mask, details=None):
         return mask
 
     def update_params(self, **kwargs):
@@ -97,3 +97,28 @@ class BaseTransform:
             detail = msk_detail if target == 'image' else img_detail
 
         return detail
+
+    def shared_apply(self, data, target='image', **kwargs):
+        pass
+
+    def record_detail(self, target='image'):
+        pass
+
+    def apply_condition(self):
+        return True
+
+    def apply_save(self, data, target, inverse=None, details=None):
+        if not inverse:
+            apply = self.apply_condition()
+        else:
+            apply = inverse
+
+        if apply:
+            if inverse:
+                data = self.shared_apply(data, target, details=details)
+            else:
+                data = self.shared_apply(data, target, details=None)
+
+        if inverse is None and details is not None:
+            self.record_detail(target=target)
+        return data

@@ -254,13 +254,12 @@ class PadIfNeeded(BaseTransform):
 @TRANSFORMS.register_module
 class RandomCrop(PadIfNeeded):
     def __init__(self, height, width, image_value, mask_value):
-        self.height = height
-        self.width = width
-        self.image_value = image_value
-        self.mask_value = mask_value
         self.channel = len(image_value)
         self.crop_info = None
-        super().__init__()
+        super().__init__(height=height,
+                         width=width,
+                         image_value=image_value,
+                         mask_value=mask_value)
 
     def get_crop_info(self, image):
         h, w = image.shape[:2]
@@ -337,55 +336,50 @@ class RandomCrop(PadIfNeeded):
 
 
 @TRANSFORMS.register_module
-class HorizontalFlip:
+class HorizontalFlip(BaseTransform):
     def __init__(self, p=0.5):
         self.p = p
         self.random_number = 0.0
+        super().__init__()
 
-    def update_params():
-        self.random_number = random.random() 
+    def update_params(self, ):
+        self.random_number = random.random()
 
-    def image_forward(self, image, **kwargs):
-        if self.random_number > self.p:
-            image = cv2.flip(image, 1)
-        if kwargs.get('details', None) is not None:
-            info = {'flipped': self.random_number > self.p}
-            self.transform_detail['image'].update(info)
-        return image
+    def shared_apply(self, data, target=None, **kwargs):
+        return cv2.flip(data, 1)
 
-    def mask_forward(self, mask, **kwargs):
-        if self.random_number > self.p:
-            mask = cv2.flip(mask, 1)
-        if kwargs.get('details', None) is not None:
-            info = {'flipped': self.random_number > self.p}
-            self.transform_detail['mask'].update(info)
-        return mask
+    def record_detail(self, target='image'):
+        info = {'flipped': self.random_number > self.p}
+        self.transform_detail[target].update(info)
 
-    def image_inverse(self, image, **kwargs):
-        detail = self.load_detail(target='image', **kwargs)
+    def apply_condition(self):
+        return self.random_number > self.p
+
+    def image_forward(self, image, details=None):
+        return self.apply_save(image, 'image', details=details)
+
+    def mask_forward(self, mask, details=None):
+        return self.apply_save(mask, 'mask', details=details)
+
+    def image_inverse(self, image, details=None):
+        detail = self.load_detail(target='image', details=details)
         flipped = detail.get('flipped', None)
-        
+        assert flipped is not None, 'No flip info provided for transform.'
+        if not flipped:
+            return image
+        return self.apply_save(image, 'image', inverse=True)
 
-        if self.random_number > self.p:
-            image = cv2.flip(image, 1)
-        if kwargs.get('details', None) is not None:
-            info = {'flipped': self.random_number > self.p}
-            self.transform_detail['image'].update(info)
-        return image
-
-
-
-
-    def __call__(self, image, mask):
-        if random.random() > self.p:
-            image = cv2.flip(image, 1)
-            mask = cv2.flip(mask, 1)
-
-        return image, mask
+    def mask_inverse(self, mask, details=None):
+        detail = self.load_detail(target='mask', details=details)
+        flipped = detail.get('flipped', None)
+        assert flipped is not None, 'No flip info provided for transform.'
+        if not flipped:
+            return mask
+        return self.apply_save(mask, 'mask', inverse=True)
 
 
 @TRANSFORMS.register_module
-class RandomRotate:
+class RandomRotate(HorizontalFlip):
     def __init__(self,
                  p=0.5,
                  degrees=30,
@@ -393,90 +387,188 @@ class RandomRotate:
                  border_mode='reflect101',
                  image_value=None,
                  mask_value=None):
-        self.p = p
-        self.degrees = (-degrees, degrees) if isinstance(degrees, (int, float)) else degrees
+        self.degrees = degrees
+        if isinstance(degrees, (int, float)):
+            self.degrees = (-degrees, degrees)
         self.mode = CV2_MODE[mode]
         self.border_mode = CV2_BORDER_MODE[border_mode]
         self.image_value = image_value
         self.mask_value = mask_value
+        self.angle = None
+        super().__init__(p=p)
 
-    def __call__(self, image, mask):
-        if random.random() < self.p:
-            h, w, c = image.shape
+    def get_rotate_info(self):
+        self.angle = random.uniform(*self.degrees)
 
-            angle = random.uniform(*self.degrees)
-            matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+    def update_params(self, **kwargs):
+        self.random_number = random.random()
+        if self.random_number < self.p:
+            self.get_rotate_info()
 
-            image = cv2.warpAffine(image,
-                                   M=matrix,
-                                   dsize=(w, h),
-                                   flags=self.mode,
-                                   borderMode=self.border_mode,
-                                   borderValue=self.image_value)
-            mask = cv2.warpAffine(mask,
-                                  M=matrix,
-                                  dsize=(w, h),
-                                  flags=cv2.INTER_NEAREST,
-                                  borderMode=self.border_mode,
-                                  borderValue=self.mask_value)
+    def shared_apply(self, data, target=None, details=None):
+        h, w = data.shape[:2]
+        flags = self.mode
+        border_value = self.image_value
+        if target == 'mask':
+            flags = cv2.INTER_NEAREST
+            border_value = self.mask_value
 
-        return image, mask
+        angle = self.angle
+        if details is not None:
+            angle = details.get('angle', None)
+            assert angle is not None, 'No rotate info provided for transform.'
+            angle = -angle
+
+        matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
+        data = cv2.warpAffine(data,
+                              M=matrix,
+                              dsize=(w, h),
+                              flags=flags,
+                              borderMode=self.border_mode,
+                              borderValue=border_value)
+
+        return data
+
+    def record_detail(self, target='image'):
+        info = {'rotated': self.apply_condition(),
+                'angle': self.angle}
+        self.transform_detail[target].update(info)
+
+    def image_inverse(self, image, details=None):
+        details = self.load_detail(target='image', details=details)
+        rotated = details.get('rotated', None)
+        assert rotated is not None, 'No rotate info provided for transform.'
+        if not rotated:
+            return image
+        return self.apply_save(image, 'image', inverse=True, details=details)
+
+    def mask_inverse(self, mask, details=None):
+        details = self.load_detail(target='mask', details=details)
+        rotated = details.get('rotated', None)
+        assert rotated is not None, 'No rotate info provided for transform.'
+        if not rotated:
+            return mask
+        return self.apply_save(mask, 'mask', inverse=True, details=details)
 
 
 @TRANSFORMS.register_module
-class GaussianBlur:
+class GaussianBlur(BaseTransform):
     def __init__(self, p=0.5, ksize=7):
         self.p = p
+        self.random_number = 0.0
         self.ksize = (ksize, ksize) if isinstance(ksize, int) else ksize
+        super().__init__()
 
-    def __call__(self, image, mask):
-        if random.random() < self.p:
-            image = cv2.GaussianBlur(image, ksize=self.ksize, sigmaX=0)
+    def update_params(self, ):
+        self.random_number = random.random()
 
-        return image, mask
+    def shared_apply(self, data, target=None, **kwargs):
+        return cv2.GaussianBlur(data, ksize=self.ksize, sigmaX=0)
+
+    def record_detail(self, target='image'):
+        info = {'blurred': self.apply_condition(),
+                'kernel_size': self.angle}
+        self.transform_detail[target].update(info)
+
+    def apply_condition(self):
+        return self.random_number > self.p
+
+    def image_forward(self, image, details=None):
+        return self.apply_save(image, 'image', details=details)
+
+    def image_inverse(self, image, details=None):
+        logger.warning('Skipped inverse gaussian blur')
+        return image
 
 
 @TRANSFORMS.register_module
-class Normalize:
+class Normalize(BaseTransform):
     def __init__(self,
                  mean=(123.675, 116.280, 103.530),
                  std=(58.395, 57.120, 57.375)):
         self.mean = mean
         self.std = std
         self.channel = len(mean)
+        super().__init__()
 
-    def __call__(self, image, mask):
-        mean = np.reshape(np.array(self.mean, dtype=image.dtype),
-                          [1, 1, self.channel])
-        std = np.reshape(np.array(self.std, dtype=image.dtype),
-                         [1, 1, self.channel])
-        denominator = np.reciprocal(std, dtype=image.dtype)
+    def shared_apply(self, data, target=None, details=None):
+        if target == 'image':
+            mean = np.reshape(np.array(self.mean, dtype=data.dtype),
+                              [1, 1, self.channel])
+            std = np.reshape(np.array(self.std, dtype=data.dtype),
+                             [1, 1, self.channel])
 
-        new_image = (image - mean) * denominator
-        new_mask = mask
+            if details is not None:
+                new_data = data * std + mean
+            else:
+                denominator = np.reciprocal(std, dtype=data.dtype)
+                new_data = (data - mean) * denominator
+            return new_data
+        else:
+            return data
 
-        return new_image, new_mask
+    def record_detail(self, target='image'):
+        info = {'Normalized': True}
+        self.transform_detail[target].update(info)
+
+    def image_forward(self, image, details=None):
+        return self.apply_save(image, 'image', details=details)
+
+    def image_inverse(self, image, details=None):
+        return self.apply_save(image, 'image', inverse=True, details=details)
 
 
 @TRANSFORMS.register_module
-class ColorJitter(tt.ColorJitter):
+class ColorJitter(BaseTransform):
     def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
-        super().__init__(brightness=brightness,
-                         contrast=contrast,
-                         saturation=saturation,
-                         hue=hue)
+        self.jitter = tt.ColorJitter(brightness=brightness,
+                                     contrast=contrast,
+                                     saturation=saturation,
+                                     hue=hue)
+        super().__init__()
 
-    def __call__(self, image, mask=None):
-        new_image = Image.fromarray(image.astype(np.uint8))
-        new_image = super().__call__(new_image)
-        new_image = np.array(new_image).astype(np.float32)
-        return new_image, mask
+    def shared_apply(self, data, target=None, details=None):
+        if target == 'image':
+            new_image = Image.fromarray(data.astype(np.uint8))
+            new_image = self.jitter(new_image)
+            new_image = np.array(new_image).astype(np.float32)
+            return new_image
+        else:
+            return data
+
+    def record_detail(self, target='image'):
+        info = {'Jittered': True}
+        self.transform_detail[target].update(info)
+
+    def image_forward(self, image, details=None):
+        return self.apply_save(image, 'image', details=details)
+
+    def image_inverse(self, image, details=None):
+        logger.warning('Skipped inverse color jitter (not implemented yet)')
+        return image
 
 
 @TRANSFORMS.register_module
-class ToTensor:
-    def __call__(self, image, mask):
-        image = torch.from_numpy(image).permute(2, 0, 1)
-        mask = torch.from_numpy(mask)
+class ToTensor(BaseTransform):
+    def shared_apply(self, data, target=None, details=None):
+        new_data = torch.from_numpy(data)
+        if target == 'image':
+            return new_data.permute(2, 0, 1)
+        return new_data
 
-        return image, mask
+    def record_detail(self, target='image'):
+        info = {'Tensorified': True}
+        self.transform_detail[target].update(info)
+
+    def image_forward(self, image, details=None):
+        return self.apply_save(image, 'image', details=details)
+
+    def mask_forward(self, mask, details=None):
+        return self.apply_save(mask, 'mask', details=details)
+
+    def image_inverse(self, image, details=None):
+        new_image = image.permute(1, 2, 0)
+        return new_image.cup().numpy()
+
+    def mask_inverse(self, mask, details=None):
+        return mask.cup().numpy()
