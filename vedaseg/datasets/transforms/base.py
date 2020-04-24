@@ -62,21 +62,6 @@ class BaseTransform:
             "mask_inverse": self.mask_inverse,
         }
 
-    def image_forward(self, image, details=None):
-        return image
-
-    def mask_forward(self, mask, details=None):
-        return mask
-
-    def image_inverse(self, image, details=None):
-        return image
-
-    def mask_inverse(self, mask, details=None):
-        return mask
-
-    def update_params(self, **kwargs):
-        pass
-
     def load_detail(self, shared=True, target='image', **kwargs):
         detail = kwargs.get('details', None)
         assert detail is not None, 'No detail provided to inverse scale'
@@ -98,12 +83,6 @@ class BaseTransform:
 
         return detail
 
-    def shared_apply(self, data, target='image', **kwargs):
-        pass
-
-    def record_detail(self, target='image'):
-        pass
-
     def apply_condition(self):
         return True
 
@@ -122,3 +101,24 @@ class BaseTransform:
         if inverse is None and details is not None:
             self.record_detail(target=target)
         return data
+
+    def shared_apply(self, data, target='image', **kwargs):
+        pass
+
+    def record_detail(self, target='image'):
+        pass
+
+    def image_forward(self, image, details=None):
+        return image
+
+    def mask_forward(self, mask, details=None):
+        return mask
+
+    def image_inverse(self, image, details=None):
+        return image
+
+    def mask_inverse(self, mask, details=None):
+        return mask
+
+    def update_params(self, **kwargs):
+        pass
