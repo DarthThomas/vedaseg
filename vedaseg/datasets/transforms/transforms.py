@@ -340,6 +340,41 @@ class RandomCrop(PadIfNeeded):
 class HorizontalFlip:
     def __init__(self, p=0.5):
         self.p = p
+        self.random_number = 0.0
+
+    def update_params():
+        self.random_number = random.random() 
+
+    def image_forward(self, image, **kwargs):
+        if self.random_number > self.p:
+            image = cv2.flip(image, 1)
+        if kwargs.get('details', None) is not None:
+            info = {'flipped': self.random_number > self.p}
+            self.transform_detail['image'].update(info)
+        return image
+
+    def mask_forward(self, mask, **kwargs):
+        if self.random_number > self.p:
+            mask = cv2.flip(mask, 1)
+        if kwargs.get('details', None) is not None:
+            info = {'flipped': self.random_number > self.p}
+            self.transform_detail['mask'].update(info)
+        return mask
+
+    def image_inverse(self, image, **kwargs):
+        detail = self.load_detail(target='image', **kwargs)
+        flipped = detail.get('flipped', None)
+        
+
+        if self.random_number > self.p:
+            image = cv2.flip(image, 1)
+        if kwargs.get('details', None) is not None:
+            info = {'flipped': self.random_number > self.p}
+            self.transform_detail['image'].update(info)
+        return image
+
+
+
 
     def __call__(self, image, mask):
         if random.random() > self.p:
