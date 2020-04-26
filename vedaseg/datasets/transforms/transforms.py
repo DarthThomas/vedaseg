@@ -86,17 +86,16 @@ class FactorScale(BaseTransform):
         scale_factor = kwargs.get('scale_factor', self.scale_factor)
         self.check_scale_factor(scale_factor)
 
-        if scale_factor == 1.0:
-            return image
-
-        new_h = int(image.shape[0] * scale_factor)
-        new_w = int(image.shape[1] * scale_factor)
-
         if kwargs.get('details', None) is not None:
             info = {'shape_orig': image.shape[:2],
                     'scale_factor': self.scale_factor}
             self.transform_detail['image'].update(info)
 
+        if scale_factor == 1.0:
+            return image
+
+        new_h = int(image.shape[0] * scale_factor)
+        new_w = int(image.shape[1] * scale_factor)
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w),
                                     mode=self.mode, align_corners=True)
@@ -108,17 +107,16 @@ class FactorScale(BaseTransform):
         scale_factor = kwargs.get('scale_factor', self.scale_factor)
         self.check_scale_factor(scale_factor)
 
-        if scale_factor == 1.0:
-            return mask
-
-        new_h = int(mask.shape[0] * scale_factor)
-        new_w = int(mask.shape[1] * scale_factor)
-
         if kwargs.get('details', None) is not None:
             info = {'shape_orig': mask.shape[:2],
                     'scale_factor': self.scale_factor}
             self.transform_detail['mask'].update(info)
 
+        if scale_factor == 1.0:
+            return mask
+
+        new_h = int(mask.shape[0] * scale_factor)
+        new_w = int(mask.shape[1] * scale_factor)
         torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
                                    mode='nearest')
@@ -419,7 +417,7 @@ class HorizontalFlip(BaseTransform):
         return cv2.flip(data, 1)
 
     def record_detail(self, target='image'):
-        info = {'flipped': self.random_number > self.p}
+        info = {'flipped': self.random_number < self.p}
         self.transform_detail[target].update(info)
 
     def apply_condition(self):
@@ -437,7 +435,7 @@ class HorizontalFlip(BaseTransform):
         assert flipped is not None, 'No flip info provided for transform.'
         if not flipped:
             return image
-        return self.apply_save(image, 'image', inverse=True)
+        return self.shared_apply(image, 'image')
 
     def mask_inverse(self, mask, details=None, **kwargs):
         detail = self.load_detail(target='mask', details=details)
@@ -445,7 +443,7 @@ class HorizontalFlip(BaseTransform):
         assert flipped is not None, 'No flip info provided for transform.'
         if not flipped:
             return mask
-        return self.apply_save(mask, 'mask', inverse=True)
+        return self.shared_apply(mask, 'mask')
 
 
 @TRANSFORMS.register_module
