@@ -77,8 +77,8 @@ class BaseTransform:
             assert detail is not None, f"No detail provided for {target}"
 
         if detail is None:
-            logger.warning(f"Using shared detail to do inverse transform "
-                           f"for{self.__class__.__name__}.")
+            logger.debug(f"Using shared detail to do inverse transform "
+                         f"for{self.__class__.__name__}.")
             detail = msk_detail if target == 'image' else img_detail
 
         return detail
@@ -108,16 +108,16 @@ class BaseTransform:
     def record_detail(self, target='image'):
         pass
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return image
 
-    def mask_forward(self, mask, details=None):
+    def mask_forward(self, mask, details=None, **kwargs):
         return mask
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         return image
 
-    def mask_inverse(self, mask, details=None):
+    def mask_inverse(self, mask, details=None, **kwargs):
         return mask
 
     def update_params(self, **kwargs):

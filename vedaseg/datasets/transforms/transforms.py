@@ -179,7 +179,7 @@ class RandomScale(FactorScale):
 
         return scale_factor
 
-    def update_params(self, ):
+    def update_params(self, **kwargs):
         self.scale_factor = self.get_scale_factor(self.min_scale,
                                                   self.max_scale,
                                                   self.scale_step)
@@ -355,13 +355,13 @@ class HorizontalFlip(BaseTransform):
     def apply_condition(self):
         return self.random_number > self.p
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
 
-    def mask_forward(self, mask, details=None):
+    def mask_forward(self, mask, details=None, **kwargs):
         return self.apply_save(mask, 'mask', details=details)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         detail = self.load_detail(target='image', details=details)
         flipped = detail.get('flipped', None)
         assert flipped is not None, 'No flip info provided for transform.'
@@ -369,7 +369,7 @@ class HorizontalFlip(BaseTransform):
             return image
         return self.apply_save(image, 'image', inverse=True)
 
-    def mask_inverse(self, mask, details=None):
+    def mask_inverse(self, mask, details=None, **kwargs):
         detail = self.load_detail(target='mask', details=details)
         flipped = detail.get('flipped', None)
         assert flipped is not None, 'No flip info provided for transform.'
@@ -434,7 +434,7 @@ class RandomRotate(HorizontalFlip):
                 'angle': self.angle}
         self.transform_detail[target].update(info)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         details = self.load_detail(target='image', details=details)
         rotated = details.get('rotated', None)
         assert rotated is not None, 'No rotate info provided for transform.'
@@ -442,7 +442,7 @@ class RandomRotate(HorizontalFlip):
             return image
         return self.apply_save(image, 'image', inverse=True, details=details)
 
-    def mask_inverse(self, mask, details=None):
+    def mask_inverse(self, mask, details=None, **kwargs):
         details = self.load_detail(target='mask', details=details)
         rotated = details.get('rotated', None)
         assert rotated is not None, 'No rotate info provided for transform.'
@@ -473,10 +473,10 @@ class GaussianBlur(BaseTransform):
     def apply_condition(self):
         return self.random_number > self.p
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         logger.warning('Skipped inverse gaussian blur')
         return image
 
@@ -511,10 +511,10 @@ class Normalize(BaseTransform):
         info = {'Normalized': True}
         self.transform_detail[target].update(info)
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', inverse=True, details=details)
 
 
@@ -540,10 +540,10 @@ class ColorJitter(BaseTransform):
         info = {'Jittered': True}
         self.transform_detail[target].update(info)
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         logger.warning('Skipped inverse color jitter (not implemented yet)')
         return image
 
@@ -560,15 +560,15 @@ class ToTensor(BaseTransform):
         info = {'Tensorified': True}
         self.transform_detail[target].update(info)
 
-    def image_forward(self, image, details=None):
+    def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
 
-    def mask_forward(self, mask, details=None):
+    def mask_forward(self, mask, details=None, **kwargs):
         return self.apply_save(mask, 'mask', details=details)
 
-    def image_inverse(self, image, details=None):
+    def image_inverse(self, image, details=None, **kwargs):
         new_image = image.permute(1, 2, 0)
         return new_image.cup().numpy()
 
-    def mask_inverse(self, mask, details=None):
+    def mask_inverse(self, mask, details=None, **kwargs):
         return mask.cup().numpy()
