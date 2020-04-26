@@ -128,15 +128,29 @@ class FactorScale(BaseTransform):
 
     def image_inverse(self, image, **kwargs):
         detail = self.load_detail(target='image', **kwargs)
-        scale_factor = detail.get('scale_factor', 0)
-        self.check_scale_factor(scale_factor)
-        self.image_forward(image, scale_factor=1.0 / scale_factor)
+        shape_orig = detail.get('shape_orig', None)
+        assert shape_orig is not None, f"Shape info not provided for transform"
+        new_h, new_w = shape_orig
+
+        torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
+        torch_image = F.interpolate(torch_image, size=(new_h, new_w),
+                                    mode=self.mode, align_corners=True)
+        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
+
+        return new_image
 
     def mask_inverse(self, mask, **kwargs):
         detail = self.load_detail(target='mask', **kwargs)
-        scale_factor = detail.get('scale_factor', 0)
-        self.check_scale_factor(scale_factor)
-        self.image_forward(mask, scale_factor=1.0 / scale_factor)
+        shape_orig = detail.get('shape_orig', None)
+        assert shape_orig is not None, f"Shape info not provided for transform"
+        new_h, new_w = shape_orig
+
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+        torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
+                                   mode='nearest')
+        new_mask = torch_mask.squeeze().numpy()
+
+        return new_mask
 
 
 @TRANSFORMS.register_module
@@ -145,16 +159,62 @@ class SizeScale(FactorScale):
         self.target_size = target_size
         super().__init__(mode=mode)
 
-    def get_scale_factor(self, long_edge):
-        self.scale_factor = self.target_size / long_edge
+    def get_scale_factor(self, data):
+        if isinstance(self.target_size, int):
+            scale_factor = self.target_size / max(data.shape[:2])
+        else:
+            scale_factor = None
+        return scale_factor
+
+    def update_params(self, **kwargs):
+        image = kwargs.get('image', None)
+        mask = kwargs.get('mask', None)
+        recorded = False
+        if image is not None:
+            self.scale_factor = self.get_scale_factor(image)
+            recorded = True
+        if mask is not None:
+            scale_factor = self.get_scale_factor(mask)
+            if recorded:
+                if scale_factor != self.scale_factor:
+                    raise ValueError(f"Got different scale factor between "
+                                     f"image: {self.scale_factor} and "
+                                     f"mask: {scale_factor}.")
+            else:
+                self.scale_factor = scale_factor
+            recorded = True
+        if not recorded:
+            raise ValueError('Neither image or mask was provided')
 
     def image_forward(self, image, **kwargs):
-        self.get_scale_factor(max(image.shape[:2]))
-        super().image_forward(image, **kwargs)
+        if isinstance(self.target_size, int):
+            return super().image_forward(image, **kwargs)
+
+        if kwargs.get('details', None) is not None:
+            info = {'shape_orig': image.shape[:2]}
+            self.transform_detail['image'].update(info)
+
+        torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
+        torch_image = F.interpolate(torch_image, size=self.target_size,
+                                    mode=self.mode, align_corners=True)
+        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
+
+        return new_image
 
     def mask_forward(self, mask, **kwargs):
-        self.get_scale_factor(max(mask.shape[:2]))
-        super().mask_forward(mask, **kwargs)
+        if isinstance(self.target_size, int):
+            return super().mask_forward(mask, **kwargs)
+
+        if kwargs.get('details', None) is not None:
+            info = {'shape_orig': mask.shape[:2]}
+            self.transform_detail['mask'].update(info)
+
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
+        torch_mask = F.interpolate(torch_mask, size=self.target_size,
+                                   mode='nearest')
+        new_mask = torch_mask.squeeze().numpy()
+
+        return new_mask
 
 
 @TRANSFORMS.register_module
@@ -195,10 +255,17 @@ class PadIfNeeded(BaseTransform):
         self.channel = len(image_value)
         super().__init__()
 
+    def check_hw(self, shape):
+        h, w = shape
+        if self.__class__.__name__ == 'PadIfNeeded':
+            if h > self.height or w > self.width:
+                raise ValueError(f"Original image shape: {shape}, already "
+                                 f"larger than intended padding area: "
+                                 f"{self.height, self.width}")
+
     def image_forward(self, image, **kwargs):
         h, w = image.shape[:2]
-
-        assert h <= self.height and w <= self.width
+        self.check_hw(image.shape[:2])
 
         target_height = h + max(self.height - h, 0)
         target_width = w + max(self.width - w, 0)
@@ -217,8 +284,7 @@ class PadIfNeeded(BaseTransform):
 
     def mask_forward(self, mask, **kwargs):
         h, w = mask.shape[:2]
-
-        assert h <= self.height and w <= self.width
+        self.check_hw(mask.shape[:2])
 
         target_height = h + max(self.height - h, 0)
         target_width = w + max(self.width - w, 0)
@@ -256,6 +322,7 @@ class RandomCrop(PadIfNeeded):
     def __init__(self, height, width, image_value, mask_value):
         self.channel = len(image_value)
         self.crop_info = None
+        self.shape_orig = None
         super().__init__(height=height,
                          width=width,
                          image_value=image_value,
@@ -270,6 +337,7 @@ class RandomCrop(PadIfNeeded):
         x1 = int(random.uniform(0, target_width - self.width + 1))
         x2 = x1 + self.width
         self.crop_info = (y1, y2, x1, x2)
+        self.shape_orig = h, w
 
     def update_params(self, **kwargs):
         image = kwargs.get('image', None)
@@ -281,58 +349,60 @@ class RandomCrop(PadIfNeeded):
         else:
             raise ValueError('Neither image or mask was provided')
 
-    def image_forward(self, image, **kwargs):
+    def shared_apply(self, data, target=None, details=None):
         y1, y2, x1, x2 = self.crop_info
-        padded = super().image_forward(image, **kwargs)
-        new_image = padded[y1:y2, x1:x2, :]
-        if kwargs.get('details', None) is not None:
-            info = {'shape_padded': image.shape[:2],
-                    'crop_info': self.crop_info}
-            self.transform_detail['image'].update(info)
-        return new_image
+        if target == 'image':
+            padded = super().image_forward(data)
+            new_data = padded[y1:y2, x1:x2, :]
+        elif target == 'mask':
+            padded = super().mask_forward(data)
+            new_data = padded[y1:y2, x1:x2]
+        else:
+            raise ValueError(f"Unrecognized target:{target}.")
+        return new_data
+
+    def record_detail(self, target='image'):
+        info = {'shape_orig': self.shape_orig,
+                'crop_info': self.crop_info}
+        self.transform_detail['image'].update(info)
+
+    def image_forward(self, image, **kwargs):
+        return self.apply_save(image, target='image', **kwargs)
 
     def mask_forward(self, mask, **kwargs):
-        y1, y2, x1, x2 = self.crop_info
-        padded = super().mask_forward(mask, **kwargs)
-        new_mask = padded[y1:y2, x1:x2]
-        if kwargs.get('details', None) is not None:
-            info = {'shape_padded': mask.shape[:2],
-                    'crop_info': self.crop_info}
-            self.transform_detail['mask'].update(info)
-        return new_mask
+        return self.apply_save(mask, target='mask', **kwargs)
 
     def image_inverse(self, image, **kwargs):
         detail = self.load_detail(target='image', **kwargs)
         image_pad_value = np.reshape(np.array(self.image_value,
                                               dtype=image.dtype),
                                      [1, 1, self.channel])
-        shape = detail.get('shape_padded', None)
+        shape = detail.get('shape_orig', None)
         crop_info = detail.get('crop_info', None)
         for _ in [shape, crop_info]:
             assert _ is not None, 'No padded shape provided for inverse ' \
                                   'transform'
         h, w = shape
         y1, y2, x1, x2 = crop_info
-        padded = np.tile(image_pad_value, (h, w, 1))
+        padded = np.tile(image_pad_value, (y2 - y1 + h, x2 - x1 + w, 1))
         padded[y1:y2, x1:x2, :] = image
-        return padded
+        return padded[:h, :w]
 
     def mask_inverse(self, mask, **kwargs):
         detail = self.load_detail(target='mask', **kwargs)
         mask_pad_value = np.reshape(np.array(self.mask_value,
                                              dtype=mask.dtype),
                                     [1, 1])
-        shape = detail.get('shape_padded', None)
+        shape = detail.get('shape_orig', None)
         crop_info = detail.get('crop_info', None)
         for _ in [shape, crop_info]:
             assert _ is not None, 'No padded shape provided for inverse ' \
                                   'transform'
         h, w = shape
         y1, y2, x1, x2 = crop_info
-
-        padded = np.tile(mask_pad_value, (h, w))
+        padded = np.tile(mask_pad_value, (y2 - y1 + h, x2 - x1 + w))
         padded[y1:y2, x1:x2] = mask
-        return padded
+        return padded[:h, :w]
 
 
 @TRANSFORMS.register_module
@@ -342,7 +412,7 @@ class HorizontalFlip(BaseTransform):
         self.random_number = 0.0
         super().__init__()
 
-    def update_params(self, ):
+    def update_params(self, **kwargs):
         self.random_number = random.random()
 
     def shared_apply(self, data, target=None, **kwargs):
@@ -353,7 +423,7 @@ class HorizontalFlip(BaseTransform):
         self.transform_detail[target].update(info)
 
     def apply_condition(self):
-        return self.random_number > self.p
+        return self.random_number < self.p
 
     def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
@@ -394,7 +464,7 @@ class RandomRotate(HorizontalFlip):
         self.border_mode = CV2_BORDER_MODE[border_mode]
         self.image_value = image_value
         self.mask_value = mask_value
-        self.angle = None
+        self.angle = 0
         super().__init__(p=p)
 
     def get_rotate_info(self):
@@ -418,7 +488,6 @@ class RandomRotate(HorizontalFlip):
             angle = details.get('angle', None)
             assert angle is not None, 'No rotate info provided for transform.'
             angle = -angle
-
         matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
         data = cv2.warpAffine(data,
                               M=matrix,
@@ -459,7 +528,7 @@ class GaussianBlur(BaseTransform):
         self.ksize = (ksize, ksize) if isinstance(ksize, int) else ksize
         super().__init__()
 
-    def update_params(self, ):
+    def update_params(self, **kwargs):
         self.random_number = random.random()
 
     def shared_apply(self, data, target=None, **kwargs):
@@ -467,11 +536,11 @@ class GaussianBlur(BaseTransform):
 
     def record_detail(self, target='image'):
         info = {'blurred': self.apply_condition(),
-                'kernel_size': self.angle}
+                'kernel_size': self.ksize}
         self.transform_detail[target].update(info)
 
     def apply_condition(self):
-        return self.random_number > self.p
+        return self.random_number < self.p
 
     def image_forward(self, image, details=None, **kwargs):
         return self.apply_save(image, 'image', details=details)
@@ -568,7 +637,7 @@ class ToTensor(BaseTransform):
 
     def image_inverse(self, image, details=None, **kwargs):
         new_image = image.permute(1, 2, 0)
-        return new_image.cup().numpy()
+        return new_image.cpu().numpy()
 
     def mask_inverse(self, mask, details=None, **kwargs):
-        return mask.cup().numpy()
+        return mask.cpu().numpy()
