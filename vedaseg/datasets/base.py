@@ -1,5 +1,7 @@
 from torch.utils.data import Dataset
 
+from .transforms.transforms import Compose
+
 
 class BaseDataset(Dataset):
     """ BaseDataset
@@ -8,8 +10,9 @@ class BaseDataset(Dataset):
     def __init__(self):
         self.transform = None
 
-    def process(self, image, mask):
+    def process(self, **kwargs):
         if self.transform:
-            image, mask = self.transform(image, mask)
+            transforms = Compose(self.transform)
+            return transforms(**kwargs)
 
-        return image, mask
+        return kwargs

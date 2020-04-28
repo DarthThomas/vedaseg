@@ -47,12 +47,13 @@ class Compose:
                 state = t(**state)
             return self.unpack(state)
         else:
-            details = state.get('details', [])
-            assert len(details) == 0, f"Should start recording with an empty" \
-                                      f" list while list {details} with " \
-                                      f"length '{len(details)}' provided."
-            transforms = self.transforms
-            for t in transforms:
+            details = state.get('details', None)
+            if details is not None:
+                assert len(details) == 0, f"Should start recording with an " \
+                                          f"empty list while list {details} " \
+                                          f"with length '{len(details)}' " \
+                                          f"provided."
+            for t in self.transforms:
                 state = t(**state)
             return self.unpack(state)
 

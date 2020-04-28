@@ -10,7 +10,6 @@ logger = dict(
 )
 
 # 2. data
-data_scale = 1 #234 / 451
 net_size = 481
 
 img_norm_cfg = dict(mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375))
@@ -19,7 +18,9 @@ ignore_label = 255
 data = dict(
     infer=dict(
         transforms=[
-            dict(type='PadIfNeeded', height=net_size, width=net_size, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
+            dict(type='SizeScale', target_size=net_size),
+            dict(type='PadIfNeeded', height=net_size, width=net_size,
+                 image_value=img_norm_cfg['mean'], mask_value=ignore_label),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
         ]

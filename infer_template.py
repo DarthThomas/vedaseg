@@ -10,9 +10,13 @@ from vedaseg.assembler import assemble
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Use trained semantic segmenter')
-    parser.add_argument('config', help='train config file path')
-    parser.add_argument('checkpoint', help='train config file path')
-    parser.add_argument('img_dir', help='infer image path')
+    base_dir = '/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
+    parser.add_argument('--config', help='train config file path',
+                        default=base_dir + 'configs/d3p_481.py')
+    parser.add_argument('--checkpoint', help='train config file path',
+                        default=base_dir + 'model/epoch_50.pth')
+    parser.add_argument('--img_dir', help='infer image path',
+                        default=base_dir + 'vedaseg/orig.jpg')
     args = parser.parse_args()
     return args
 
@@ -73,10 +77,11 @@ def main():
     checkpoint = args.checkpoint
     img_dir = args.img_dir
 
+    print(img_dir)
     image = get_image(img_dir)
     runner = assemble(cfg_fp, checkpoint)
 
-    prediction = runner(image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    prediction = runner(image=image)
     get_plot(image, prediction, vis_mask=True, vis_contour=True)
 
 

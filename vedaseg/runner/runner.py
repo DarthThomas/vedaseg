@@ -1,9 +1,7 @@
 import logging
 
-import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from .registry import RUNNERS
 from ..utils.checkpoint import load_checkpoint
@@ -26,7 +24,6 @@ class Runner:
         self.model = model
         self.gpu = gpu
         self.infer_tf = infer_tf
-        self.head_size = head_size  # TODO: read infer size from  model so that we don't need this kwarg
 
     def __call__(self, image=None):
         if isinstance(image, list):
@@ -41,27 +38,18 @@ class Runner:
         pass
 
     def infer_img(self, image):
-        h, w, c = image.shape
-        le = max(h, w)
-        factor = self.head_size / le
-        new_h = int(h * factor)
-        new_w = int(w * factor)
-        # resize original image so that the long edge = self.head_size
-        image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        image, details = self.infer_tf(image=image.astype(np.float32),
+                                       details=[])
 
-        image, _ = self.infer_tf(image.astype(np.float32),
-                                 np.zeros(image.shape[:2], dtype=np.float32))
         self.model.eval()
         with torch.no_grad():
             if self.gpu:
                 image = image.cuda()
             prob = self.model(image.unsqueeze(0))
 
-        # resize prediction to the same size of original image
-        prob = F.interpolate(prob, size=(le, le), mode='bilinear', align_corners=True)
-        _, pred_label = torch.max(prob, dim=1)
+        mask = self.infer_tf(mask=prob[0], details=details, inverse=True)
 
-        return pred_label[0, :h, :w].cpu().numpy()
+        return mask
 
     def load_checkpoint(self, filename, map_location='cpu', strict=False):
         logger.info('Resume from %s', filename)
