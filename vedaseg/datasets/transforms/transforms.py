@@ -45,6 +45,7 @@ class Compose:
             for t, detail in zip(transforms, details):
                 state.update({'details': detail})
                 state = t(**state)
+            state.pop('details')
             return self.unpack(state)
         else:
             details = state.get('details', None)

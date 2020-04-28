@@ -17,14 +17,16 @@ ignore_label = 255
 
 data = dict(
     infer=dict(
+        dataset=dict(
+            type='KFCDataset', imglist=[],
+        ),
         transforms=[
             dict(type='SizeScale', target_size=net_size),
             dict(type='PadIfNeeded', height=net_size, width=net_size,
                  image_value=img_norm_cfg['mean'], mask_value=ignore_label),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
-        ]
-    
+        ],
     )
 )
 
@@ -101,7 +103,12 @@ model = dict(
 # 7. runner
 runner = dict(
     type='Runner',
+    batch_size=16,
+    num_workers=4,
+    shuffle=False,
+    drop_last=False,
+    pin_memory=True,
 )
 
 # 8. device
-gpu_id = '8'
+gpu_id = '0'

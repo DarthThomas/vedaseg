@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from .. import utils
+from ..datasets import build_dataset
 from ..datasets.transforms.builder import build_transform
 from ..loggers import build_logger
 from ..models import build_model
@@ -32,8 +33,9 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
     logger.info(f'Assemble, Step {step}, Build Transformer')
     # 2. data
     ## 2.1 transformer
-    head_size = cfg['net_size']
     infer_tf = build_transform(cfg['data']['infer']['transforms'])
+    infer_dataset = build_dataset(cfg['data']['infer']['dataset'],
+                                  dict(transform=infer_tf))
 
     step += 1
     logger.info(f'Assemble, Step {step}, Build Model')
@@ -57,8 +59,8 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
         dict(
             model=model,
             gpu=gpu,
+            infer_dataset=infer_dataset,
             infer_tf=infer_tf,
-            head_size=head_size  # TODO: read head_size from model so that we don't need this kwarg
         )
     )
 

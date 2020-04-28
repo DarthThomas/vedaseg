@@ -1,8 +1,12 @@
 import argparse
+import os
+import time
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from tqdm import tqdm
 
 from vedaseg.assembler import assemble
 
@@ -14,9 +18,10 @@ def parse_args():
     parser.add_argument('--config', help='train config file path',
                         default=base_dir + 'configs/d3p_481.py')
     parser.add_argument('--checkpoint', help='train config file path',
-                        default=base_dir + 'model/epoch_50.pth')
+                        default=base_dir + 'vedaseg/model/epoch_50.pth')
     parser.add_argument('--img_dir', help='infer image path',
-                        default=base_dir + 'vedaseg/orig.jpg')
+                        default='/media/yuhaoye/DATA7/datasets/kfc_data_temp/'
+                                'one_batch_test/')
     args = parser.parse_args()
     return args
 
@@ -29,9 +34,11 @@ def get_contours(image, mask, color):
     return contour_img
 
 
-def get_image(img_dir):
+def get_image(img_dir, order='BGR'):
     sample = cv2.imread(img_dir)
-    return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
+    if order.lower() == 'RGB':
+        return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
+    return sample
 
 
 def get_plot(img, pd, vis_mask=False, vis_contour=True, output_dir=None):
@@ -77,12 +84,40 @@ def main():
     checkpoint = args.checkpoint
     img_dir = args.img_dir
 
-    print(img_dir)
-    image = get_image(img_dir)
     runner = assemble(cfg_fp, checkpoint)
 
-    prediction = runner(image=image)
-    get_plot(image, prediction, vis_mask=True, vis_contour=True)
+    images = []
+    for image in os.listdir(img_dir):
+        images.append(get_image(img_dir + image))
+
+    b, s = [], []
+
+    for i in tqdm(range(50)):
+        torch.cuda.synchronize()
+        single_start = time.time()
+        for image in images:
+            prediction = runner(image=image)
+        torch.cuda.synchronize()
+        single_end = time.time()
+        s.append(single_end - single_start)
+        # print(f"single infer cost :{single_end - single_start:.5f}")
+
+        torch.cuda.synchronize()
+        batch_start = time.time()
+        prediction = runner(image=images)
+        torch.cuda.synchronize()
+        batch_end = time.time()
+        b.append(batch_end - batch_start)
+        # print(f"batch infer cost :{:.5f}")
+
+    print(f"single infer cost :{sum(s) / len(s):.5f}")
+    print(f"batch infer cost :{sum(b) / len(b):.5f}")
+
+    # for image, pred in zip(images, prediction):
+    #     get_plot(cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+    #              pred,
+    #              vis_mask=True,
+    #              vis_contour=True)
 
 
 if __name__ == '__main__':
