@@ -28,7 +28,7 @@ data = dict(
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
         ],
-        loader_stting=dict(
+        loader_setting=dict(
             batch_size=8,
             num_workers=4,
             shuffle=False,

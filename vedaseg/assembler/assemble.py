@@ -61,7 +61,7 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
             gpu=gpu,
             infer_dataset=infer_dataset,
             infer_tf=infer_tf,
-            loader_setting=cfg['data']['infer']['loader_stting']
+            loader_setting=cfg['data']['infer']['loader_setting']
         )
     )
 
