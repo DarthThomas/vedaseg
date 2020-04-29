@@ -22,33 +22,20 @@ class Runner:
                  gpu=True,
                  infer_dataset=None,
                  infer_tf=None,
-                 batch_size=32,
-                 num_workers=4,
-                 shuffle=False,
-                 drop_last=False,
-                 pin_memory=True,
-                 ):
+                 loader_setting=None):
         self.model = model
         self.gpu = gpu
         self.infer_tf = infer_tf
         self.infer_dataset = infer_dataset
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.shuffle = shuffle
-        self.drop_last = drop_last
-        self.pin_memory = pin_memory
+        self.loader_setting = loader_setting
 
     def __call__(self, image=None):
         if isinstance(image, list):
             self.infer_dataset.__init__(imglist=image,
                                         transform=self.infer_tf)
             loader = DataLoader(dataset=self.infer_dataset,
-                                batch_size=self.batch_size,
-                                num_workers=self.num_workers,
-                                shuffle=self.shuffle,
-                                drop_last=self.drop_last,
-                                pin_memory=self.pin_memory,
-                                collate_fn=self.my_collate)
+                                collate_fn=self.my_collate,
+                                **self.loader_setting)
             res = []
             for images, details in loader:
                 res.extend(self.infer_batch(images, details))

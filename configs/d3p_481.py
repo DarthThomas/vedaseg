@@ -12,13 +12,14 @@ logger = dict(
 # 2. data
 net_size = 481
 
-img_norm_cfg = dict(mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375))
+img_norm_cfg = dict(mean=(123.675, 116.280, 103.530),
+                    std=(58.395, 57.120, 57.375))
 ignore_label = 255
 
 data = dict(
     infer=dict(
         dataset=dict(
-            type='KFCDataset', imglist=[],
+            type='KFCDataset', imglist=[], in_order='BGR', infer=True,
         ),
         transforms=[
             dict(type='SizeScale', target_size=net_size),
@@ -27,6 +28,13 @@ data = dict(
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
         ],
+        loader_stting=dict(
+            batch_size=8,
+            num_workers=4,
+            shuffle=False,
+            drop_last=False,
+            pin_memory=True
+        ),
     )
 )
 
@@ -102,12 +110,7 @@ model = dict(
 
 # 7. runner
 runner = dict(
-    type='Runner',
-    batch_size=16,
-    num_workers=4,
-    shuffle=False,
-    drop_last=False,
-    pin_memory=True,
+    type='Runner'
 )
 
 # 8. device
