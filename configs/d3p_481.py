@@ -108,10 +108,10 @@ model = dict(
     )
 )
 
-# 7. runner
+# 4. runner
 runner = dict(
     type='Runner'
 )
 
-# 8. device
+# 5. device
 gpu_id = '0'
