@@ -31,19 +31,27 @@ class Runner:
 
     def __call__(self, image=None):
         if isinstance(image, list):
+            logger.debug(f"Entered with batch finer mode with "
+                         f"a list of {len(image)} images.")
             self.infer_dataset.__init__(imglist=image,
                                         transform=self.infer_tf)
+            logger.debug(f"Updated dataset for inference")
             loader = DataLoader(dataset=self.infer_dataset,
                                 collate_fn=self.my_collate,
                                 **self.loader_setting)
+            logger.debug(f"Generated temp dataloader with setting:\n"
+                         f"{self.loader_setting}")
             res = []
             for images, details in loader:
                 res.extend(self.infer_batch(images, details))
+            logger.debug(f"Inference done with {len(res)} masks.")
 
         else:
+            logger.debug(f"Entered with single image finer mode.")
             image, details = self.infer_tf(image=image.astype(np.float32),
                                            details=[])
             res = self.infer_img(image, details)
+            logger.debug(f"Inference done with single image.")
         return res
 
     def infer_batch(self, images, details):
