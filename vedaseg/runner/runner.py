@@ -6,6 +6,7 @@ from collections.abc import Iterable
 import numpy as np
 import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 from vedaseg.utils.path import mkdir_or_exist
@@ -99,7 +100,9 @@ class Runner:
         logger.info('Start inference')
         logger.info('inference info: %s' % self.infer_cfg)
         self.metric.reset()
-        for data in self.loader['val']:
+        for data in tqdm(self.loader['val'], 
+                         ncols=100, 
+                         desc=f"Inferencing with batch size - {self.loader['val'].batch_size}"):
             self.infer_batch(data)
 
     def train_batch(self, img, label):
@@ -230,8 +233,6 @@ class Runner:
                 metric_pkl = osp.join(metric_fp, f'{file}.pkl')
                 with open(metric_pkl, "wb") as f:
                     pickle.dump((miou, ious), f, protocol=pickle.HIGHEST_PROTOCOL)
-
-        logger.info(f'Inference, batch size: {n}')
 
     def test_time_augment(self, img):
         scales, flip, biases = [1.0], False, [0.0]
