@@ -10,7 +10,6 @@ from tqdm import tqdm
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 from vedaseg.utils.path import mkdir_or_exist
-
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
@@ -100,9 +99,11 @@ class Runner:
         logger.info('Start inference')
         logger.info('inference info: %s' % self.infer_cfg)
         self.metric.reset()
-        for data in tqdm(self.loader['val'], 
-                         ncols=100, 
-                         desc=f"Inferencing with batch size - {self.loader['val'].batch_size}"):
+        for data in tqdm(self.loader['val'],  # ncols=100,
+                         dynamic_ncols=True,
+                         unit='batch',
+                         desc=f"Inferencing with batch size - "
+                              f"{self.loader['val'].batch_size}"):
             self.infer_batch(data)
 
     def train_batch(self, img, label):
