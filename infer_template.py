@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from tqdm import tqdm
+from tqdm import trange
 
 from vedaseg.assembler import assemble
 
@@ -21,7 +21,7 @@ def parse_args():
                         default=base_dir + 'vedaseg/model/epoch_50.pth')
     parser.add_argument('--img_dir', help='infer image path',
                         default='/media/yuhaoye/DATA7/datasets/kfc_data_temp/'
-                                'one_batch_test/')
+                                'one_batch_35/')
     args = parser.parse_args()
     return args
 
@@ -36,6 +36,7 @@ def get_contours(image, mask, color):
 
 def get_image(img_dir, order='BGR'):
     sample = cv2.imread(img_dir)
+    assert sample is not None, f"sample from {img_dir} is fucking empty"
     if order.lower() == 'RGB':
         return cv2.cvtColor(sample, cv2.COLOR_BGR2RGB)
     return sample
@@ -92,7 +93,12 @@ def main():
 
     b, s = [], []
 
-    for i in tqdm(range(50)):
+    for i in trange(50,
+                    dynamic_ncols=True,
+                    desc=f'testing single/batch inference with '
+                         f'{len(images)} images',
+                    unit='round',
+                    unit_scale=True):
         torch.cuda.synchronize()
         single_start = time.time()
         for image in images:

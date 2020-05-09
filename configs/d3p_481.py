@@ -29,8 +29,8 @@ data = dict(
             dict(type='ToTensor'),
         ],
         loader_setting=dict(
-            batch_size=8,
-            num_workers=4,
+            batch_size=16,
+            num_workers=2,
             shuffle=False,
             drop_last=False,
             pin_memory=True
