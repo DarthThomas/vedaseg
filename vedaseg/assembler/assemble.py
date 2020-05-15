@@ -57,7 +57,7 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
     runner = build_runner(
         cfg['runner'],
         dict(
-            model=model,
+            model=model.eval(),
             gpu=gpu,
             infer_dataset=infer_dataset,
             infer_tf=infer_tf,

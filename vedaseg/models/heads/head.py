@@ -1,11 +1,9 @@
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import logging
 
-from vedaseg.utils import build_from_cfg
-from ..utils import build_module, ConvModules
+import torch.nn as nn
+
 from .registry import HEADS
+from ..utils import build_module, ConvModules
 from ..weight_init import init_weights
 
 logger = logging.getLogger()

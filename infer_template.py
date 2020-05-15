@@ -93,7 +93,7 @@ def main():
 
     b, s = [], []
 
-    for i in trange(50,
+    for _ in trange(50,
                     dynamic_ncols=True,
                     desc=f'testing single/batch inference with '
                          f'{len(images)} images',

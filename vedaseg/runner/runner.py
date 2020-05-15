@@ -7,6 +7,8 @@ from torch.utils.data.dataloader import DataLoader
 from .registry import RUNNERS
 from ..utils.checkpoint import load_checkpoint
 
+# import time
+
 np.set_printoptions(precision=4)
 logger = logging.getLogger()
 
@@ -55,32 +57,61 @@ class Runner:
         return res
 
     def infer_batch(self, images, details):
+        # print('^' * 27, '\n    batch infer start')
         res = []
-        self.model.eval()
+        # a_ = time.time()
         with torch.no_grad():
             if self.gpu:
+                # a = time.time()
                 images = images.cuda()
+                # print(f"{'*' * 17}image to cuda cost: {time.time() - a}")
+            # a = time.time()
             prob = self.model(images)
+            # print(f"{'*' * 17}infer cost: {time.time() - a}")
+        # a = time.time()
         _, pred_label = torch.max(prob, dim=1)
+        # print(f"{'*' * 17}take max cost: {time.time() - a}")
 
+        # a = time.time()
         for pred, detail in zip(pred_label, details):
             res.append(self.infer_tf(mask=pred.float(),
                                      details=detail,
                                      inverse=True))
-
+        # b = time.time()
+        # print(f"{'*' * 17}inverse transfrom cost: {b - a}")
+        # c = time.time()
+        # print(f"{'*' * 17}total cost: {c - a_}")
+        # print(f"batch infer finished:\n the inverse transfrom cost: "
+        #       f"{(b - a) / (c - a_) * 100:.2f} % of the total time\n"
+        #       f"{'^' * 17}\n")
         return res
 
     def infer_img(self, image, details):
-        self.model.eval()
+        # print('^' * 27, '\n    simgle infer start')
+        # a_ = time.time()
         with torch.no_grad():
             if self.gpu:
+                # a = time.time()
                 image = image.cuda()
+                # print(f"{'*' * 17}image to cuda cost: {time.time() - a}")
+            # a = time.time()
             prob = self.model(image.unsqueeze(0))
+            # print(f"{'*' * 17}infer cost: {time.time() - a}")
+        # a = time.time()
         _, pred_label = torch.max(prob, dim=1)
+        # print(f"{'*' * 17}take max cost: {time.time() - a}")
+        # a = time.time()
         mask = self.infer_tf(mask=pred_label[0].float(),
                              details=details,
                              inverse=True)
 
+        # b = time.time()
+        # print(f"{'*' * 17}inverse transfrom cost: {b - a}")
+        # c = time.time()
+        # print(f"{'*' * 17}total cost: {c - a_}")
+        # print(f"singel infer finished:\n the inverse transfrom cost: "
+        #       f"{(b - a) / (c - a_) * 100 :.2f} % of the total time\n"
+        #       f"{'^' * 17}\n")
         return mask[0]
 
     def load_checkpoint(self, filename, map_location='cpu', strict=False):
