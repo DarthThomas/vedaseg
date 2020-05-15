@@ -47,6 +47,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+*_test.py
 
 # Translations
 *.mo
@@ -119,3 +120,6 @@ workdir/
 
 # Pytorch
 *.pth
+
+# images
+*.jpg
