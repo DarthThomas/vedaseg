@@ -123,3 +123,7 @@ workdir/
 
 # images
 *.jpg
+
+# files
+time_summery
+vedaseg/model/
