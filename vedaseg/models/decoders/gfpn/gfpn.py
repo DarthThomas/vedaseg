@@ -1,9 +1,12 @@
-import torch.nn as nn
 import logging
+import time
 
-from ...weight_init import init_weights
+import torch
+import torch.nn as nn
+
 from ..builder import build_brick, build_bricks
 from ..registry import DECODERS
+from ...weight_init import init_weights
 
 logger = logging.getLogger()
 
@@ -14,6 +17,7 @@ class GFPN(nn.Module):
 
     Args:
     """
+
     def __init__(self, neck, fusion=None):
         super().__init__()
         self.neck = build_bricks(neck)
@@ -25,6 +29,8 @@ class GFPN(nn.Module):
         init_weights(self.modules())
 
     def forward(self, bottom_up):
+        a = time.time()
+        torch.cuda.synchronize()
         x = None
         feats = {}
         for ii, layer in enumerate(self.neck):
@@ -48,4 +54,6 @@ class GFPN(nn.Module):
             feats[layer.to_layer] = x
         if self.fusion:
             x = self.fusion(feats)
+        torch.cuda.synchronize()
+        print(f"{' ' * 12}GFPN infer cost: {time.time() - a}")
         return x

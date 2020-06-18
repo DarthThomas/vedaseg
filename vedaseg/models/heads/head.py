@@ -1,9 +1,11 @@
 import logging
+import time
 
+import torch
 import torch.nn as nn
 
 from .registry import HEADS
-from ..utils import build_module, ConvModules
+from ..utils import ConvModules, build_module
 from ..weight_init import init_weights
 
 logger = logging.getLogger()
@@ -15,6 +17,7 @@ class Head(nn.Module):
 
     Args:
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -51,5 +54,9 @@ class Head(nn.Module):
         init_weights(self.modules())
 
     def forward(self, x):
+        a = time.time()
+        torch.cuda.synchronize()
         feat = self.block(x)
+        torch.cuda.synchronize()
+        print(f"{' ' * 12}HEAD infer cost: {time.time() - a}")
         return feat

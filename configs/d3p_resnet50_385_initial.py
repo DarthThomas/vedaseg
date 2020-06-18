@@ -10,7 +10,7 @@ logger = dict(
 )
 
 # 2. data
-net_size = 481
+net_size = 385
 
 img_norm_cfg = dict(mean=(123.675, 116.280, 103.530),
                     std=(58.395, 57.120, 57.375))
@@ -30,10 +30,10 @@ data = dict(
         ],
         loader_setting=dict(
             batch_size=16,
-            num_workers=2,
+            num_workers=0,
             shuffle=False,
             drop_last=False,
-            pin_memory=True
+            pin_memory=False
         ),
     )
 )

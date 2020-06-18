@@ -1,11 +1,11 @@
-import torch.nn as nn
-import torch
-import torch.nn.functional as F
-import math
 import copy
+import math
 
-from ..utils import build_module, build_torch_nn, ConvModules, ConvModule
+import torch
+import torch.nn as nn
+
 from .registry import BRICKS
+from ..utils import ConvModule, build_module
 
 
 @BRICKS.register_module
@@ -152,4 +152,4 @@ class CollectBlock(nn.Module):
         if self.to_layer is None:
             return feats[self.from_layer]
         else:
-            res[self.to_layer] = feats[self.from_layer]
+            feats[self.to_layer] = feats[self.from_layer]

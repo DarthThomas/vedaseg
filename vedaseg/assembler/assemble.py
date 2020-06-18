@@ -65,8 +65,9 @@ def assemble(cfg_fp, checkpoint='', verbose=False):
         )
     )
 
-    cfg['resume'] = dict(checkpoint=checkpoint)
+    if checkpoint is not None:
+        cfg['resume'] = dict(checkpoint=checkpoint)
 
-    runner.resume(**cfg['resume'])
+        runner.resume(**cfg['resume'])
 
     return runner

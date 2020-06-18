@@ -1,22 +1,24 @@
-# modify from https://github.com/pytorch/vision/tree/master/torchvision/models/segmentation/deeplabv3.py
+# modify from https://github.com/pytorch/vision/tree/master/torchvision/models/segmentation/deeplabv3.py  # noqa
+
+import logging
+import time
+from functools import partial
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import logging
 
 from .registry import ENHANCE_MODULES
-from ...weight_init import init_weights
-from ...utils.norm import build_norm_layer
 from ...utils.act import build_act_layer
-
-from functools import partial
+from ...utils.norm import build_norm_layer
+from ...weight_init import init_weights
 
 logger = logging.getLogger()
 
 
 class ASPPConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, dilation, norm_layer, act_layer):
+    def __init__(self, in_channels, out_channels, dilation, norm_layer,
+                 act_layer):
         modules = [
             nn.Conv2d(in_channels,
                       out_channels,
@@ -65,10 +67,14 @@ class ASPP(nn.Module):
                           norm_layer(out_channels), act_layer(out_channels)))
 
         rate1, rate2, rate3 = tuple(atrous_rates)
-        modules.append(ASPPConv(in_channels, out_channels, rate1, norm_layer, act_layer))
-        modules.append(ASPPConv(in_channels, out_channels, rate2, norm_layer, act_layer))
-        modules.append(ASPPConv(in_channels, out_channels, rate3, norm_layer, act_layer))
-        modules.append(ASPPPooling(in_channels, out_channels, norm_layer, act_layer))
+        modules.append(
+            ASPPConv(in_channels, out_channels, rate1, norm_layer, act_layer))
+        modules.append(
+            ASPPConv(in_channels, out_channels, rate2, norm_layer, act_layer))
+        modules.append(
+            ASPPConv(in_channels, out_channels, rate3, norm_layer, act_layer))
+        modules.append(
+            ASPPPooling(in_channels, out_channels, norm_layer, act_layer))
 
         self.convs = nn.ModuleList(modules)
 
@@ -83,6 +89,10 @@ class ASPP(nn.Module):
         init_weights(self.modules())
 
     def forward(self, feats):
+
+        a = time.time()
+        torch.cuda.synchronize()
+
         feats_ = feats.copy()
         x = feats_[self.from_layer]
         res = []
@@ -93,4 +103,7 @@ class ASPP(nn.Module):
         if self.with_dropout:
             res = self.dropout(res)
         feats_[self.to_layer] = res
+
+        torch.cuda.synchronize()
+        print(f"{' ' * 12}ASPP infer cost: {time.time() - a}")
         return feats_

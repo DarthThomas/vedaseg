@@ -1,4 +1,5 @@
 import logging
+import time
 
 import numpy as np
 import torch
@@ -6,8 +7,6 @@ from torch.utils.data.dataloader import DataLoader
 
 from .registry import RUNNERS
 from ..utils.checkpoint import load_checkpoint
-
-# import time
 
 np.set_printoptions(precision=4)
 logger = logging.getLogger()
@@ -57,61 +56,72 @@ class Runner:
         return res
 
     def infer_batch(self, images, details):
-        # print('^' * 27, '\n    batch infer start')
+        print(f"\n\n{' ' * 4}batch infer start")
         res = []
-        # a_ = time.time()
+        a_ = time.time()
+        torch.cuda.synchronize()
         with torch.no_grad():
             if self.gpu:
-                # a = time.time()
+                a = time.time()
                 images = images.cuda()
-                # print(f"{'*' * 17}image to cuda cost: {time.time() - a}")
-            # a = time.time()
+                torch.cuda.synchronize()
+                print(f"{' ' * 8}image to cuda cost: {time.time() - a}")
+            a = time.time()
             prob = self.model(images)
-            # print(f"{'*' * 17}infer cost: {time.time() - a}")
-        # a = time.time()
+            torch.cuda.synchronize()
+            infer = time.time() - a
+            print(f"{' ' * 8}infer cost: {infer}")
+        return prob
+        a = time.time()
         _, pred_label = torch.max(prob, dim=1)
-        # print(f"{'*' * 17}take max cost: {time.time() - a}")
-
-        # a = time.time()
+        torch.cuda.synchronize()
+        print(f"{' ' * 8}take max cost: {time.time() - a}")
+        a = time.time()
         for pred, detail in zip(pred_label, details):
             res.append(self.infer_tf(mask=pred.float(),
                                      details=detail,
                                      inverse=True))
-        # b = time.time()
-        # print(f"{'*' * 17}inverse transfrom cost: {b - a}")
-        # c = time.time()
-        # print(f"{'*' * 17}total cost: {c - a_}")
-        # print(f"batch infer finished:\n the inverse transfrom cost: "
-        #       f"{(b - a) / (c - a_) * 100:.2f} % of the total time\n"
-        #       f"{'^' * 17}\n")
+        torch.cuda.synchronize()
+        b = time.time()
+        print(f"{' ' * 8}inverse transfrom cost: {b - a}")
+        c = time.time()
+        print(f"{' ' * 8}total cost: {c - a_}")
+        print(f"{' ' * 4}batch infer finished\n the infer stage cost: "
+              f"{infer / (c - a_) * 100 :.2f} % of the total time\n"
+              f"\n")
         return res
 
     def infer_img(self, image, details):
-        # print('^' * 27, '\n    simgle infer start')
-        # a_ = time.time()
+        print(f"\n{' ' * 4}single infer start")
+        a_ = time.time()
+        torch.cuda.synchronize()
         with torch.no_grad():
             if self.gpu:
-                # a = time.time()
+                a = time.time()
                 image = image.cuda()
-                # print(f"{'*' * 17}image to cuda cost: {time.time() - a}")
-            # a = time.time()
+                torch.cuda.synchronize()
+                print(f"{' ' * 8}image to cuda cost: {time.time() - a}")
+            a = time.time()
             prob = self.model(image.unsqueeze(0))
-            # print(f"{'*' * 17}infer cost: {time.time() - a}")
-        # a = time.time()
+            torch.cuda.synchronize()
+            infer = time.time() - a
+            print(f"{' ' * 8}infer cost: {infer}")
+        a = time.time()
         _, pred_label = torch.max(prob, dim=1)
-        # print(f"{'*' * 17}take max cost: {time.time() - a}")
-        # a = time.time()
+        torch.cuda.synchronize()
+        print(f"{' ' * 8}take max cost: {time.time() - a}")
+        a = time.time()
         mask = self.infer_tf(mask=pred_label[0].float(),
                              details=details,
                              inverse=True)
-
-        # b = time.time()
-        # print(f"{'*' * 17}inverse transfrom cost: {b - a}")
-        # c = time.time()
-        # print(f"{'*' * 17}total cost: {c - a_}")
-        # print(f"singel infer finished:\n the inverse transfrom cost: "
-        #       f"{(b - a) / (c - a_) * 100 :.2f} % of the total time\n"
-        #       f"{'^' * 17}\n")
+        torch.cuda.synchronize()
+        b = time.time()
+        print(f"{' ' * 8}inverse transfrom cost: {b - a}")
+        c = time.time()
+        print(f"{' ' * 8}total cost: {c - a_}")
+        print(f"{' ' * 4}single infer finished\n the infer stage cost: "
+              f"{infer / (c - a_) * 100 :.2f} % of the total time\n"
+              f"\n")
         return mask[0]
 
     def load_checkpoint(self, filename, map_location='cpu', strict=False):
@@ -126,7 +136,8 @@ class Runner:
             device_id = torch.cuda.current_device()
             self.load_checkpoint(
                 checkpoint,
-                map_location=lambda storage, loc: storage.cuda(device_id))  # noqa
+                map_location=lambda storage, loc: storage.cuda(
+                    device_id))  # noqa
         else:
             self.load_checkpoint(checkpoint, map_location=map_location)
 

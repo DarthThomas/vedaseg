@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 
 import cv2
 import matplotlib.pyplot as plt
@@ -16,19 +15,21 @@ def parse_args():
         description='Use trained semantic segmenter')
     base_dir = '/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
     parser.add_argument('--config', help='train config file path',
-                        default=base_dir + 'configs/d3p_481.py')
+                        default=base_dir + 'configs/resnet18-orig-detail')
     parser.add_argument('--checkpoint', help='train config file path',
-                        default=base_dir + 'vedaseg/model/epoch_50.pth')
+                        default=None)
+    # default=base_dir + 'vedaseg/model/epoch_50.pth')
     parser.add_argument('--img_dir', help='infer image path',
                         default='/media/yuhaoye/DATA7/datasets/kfc_data_temp/'
-                                'one_batch_35/')
+                                'one_batch_16/')
     args = parser.parse_args()
     return args
 
 
 def get_contours(image, mask, color):
     contour_img = image.copy()
-    res = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    res = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE,
+                           cv2.CHAIN_APPROX_SIMPLE)
     contours = res[1] if len(res) == 3 else res[0]
     cv2.drawContours(contour_img, contours, -1, color, 3)
     return contour_img
@@ -93,32 +94,40 @@ def main():
 
     b, s = [], []
 
-    for _ in trange(50,
+    # pr = cProfile.Profile()
+
+    # pr.enable()
+    for _ in trange(110,
                     dynamic_ncols=True,
                     desc=f'testing single/batch inference with '
                          f'{len(images)} images',
                     unit='round',
                     unit_scale=True):
-        torch.cuda.synchronize()
-        single_start = time.time()
-        for image in images:
-            prediction = runner(image=image)
-        torch.cuda.synchronize()
-        single_end = time.time()
-        s.append(single_end - single_start)
+        # torch.cuda.synchronize()
+        # single_start = time.time()
+        # for image in images:
+        #     prediction = runner(image=image)
+        # torch.cuda.synchronize()
+        # single_end = time.time()
+        # s.append(single_end - single_start)
         # print(f"single infer cost :{single_end - single_start:.5f}")
 
         torch.cuda.synchronize()
-        batch_start = time.time()
+        # batch_start = time.time()
         prediction = runner(image=images)
         torch.cuda.synchronize()
-        batch_end = time.time()
-        b.append(batch_end - batch_start)
+        # batch_end = time.time()
+        # b.append(batch_end - batch_start)
         # print(f"batch infer cost :{:.5f}")
+    # pr.disable()
+    # print(f"single infer cost :{sum(s[2:]) / (len(s) - 2):.5f}")
+    # print(f"batch infer cost :{sum(b[2:]) / (len(b) - 2):.5f}")
 
-    print(f"single infer cost :{sum(s) / len(s):.5f}")
-    print(f"batch infer cost :{sum(b) / len(b):.5f}")
-
+    # s = io.StringIO()
+    # sortby = SortKey.TIME
+    # ps = pstats.Stats(pr, stream=s).strip_dirs().sort_stats(sortby)
+    # ps.print_stats(10)
+    # print(s.getvalue())
     # for image, pred in zip(images, prediction):
     #     get_plot(cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
     #              pred,
