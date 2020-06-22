@@ -4,11 +4,13 @@ from torch.utils.data import Dataset
 class BaseDataset(Dataset):
     """ BaseDataset
     """
+
     def __init__(self):
         self.transform = None
 
-    def process(self, image, mask):
+    def process(self, **kwargs):
+        res = None
         if self.transform:
-            image, mask = self.transform(image, mask)
+            res = self.transform(**kwargs)
 
-        return image, mask
+        return res

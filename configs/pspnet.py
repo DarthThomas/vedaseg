@@ -120,7 +120,7 @@ lr_scheduler = dict(type='PolyLR', max_epochs=max_epochs)
 
 # 7. runner
 runner = dict(
-    type='Runner',
+    type='Trainer',
     max_epochs=max_epochs,
     trainval_ratio=1,
     snapshot_interval=5,

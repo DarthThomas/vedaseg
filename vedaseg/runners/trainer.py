@@ -1,12 +1,13 @@
-import torch
 import logging
 import os.path as osp
-import torch.nn.functional as F
-import numpy as np
 from collections.abc import Iterable
 
-from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
+import numpy as np
+import torch
+import torch.nn.functional as F
 
+from vedaseg.utils.checkpoint import save_checkpoint
+from .base import BaseRunner
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
@@ -15,10 +16,11 @@ logger = logging.getLogger()
 
 
 @RUNNERS.register_module
-class Runner(object):
-    """ Runner
+class Trainer(BaseRunner):
+    """ Runner for training/testing
 
     """
+
     def __init__(self,
                  loader,
                  model,
@@ -33,19 +35,18 @@ class Runner(object):
                  snapshot_interval=1,
                  gpu=True,
                  test_cfg=None,
-                 test_mode=False):
+                 test_mode=False,
+                 **kwargs):
+        super().__init__(model=model, workdir=workdir, gpu=gpu)
         self.loader = loader
-        self.model = model
         self.criterion = criterion
         self.metric = metric
         self.optim = optim
         self.lr_scheduler = lr_scheduler
         self.start_epoch = start_epoch
         self.max_epochs = max_epochs
-        self.workdir = workdir
         self.trainval_ratio = trainval_ratio
         self.snapshot_interval = snapshot_interval
-        self.gpu = gpu
         self.test_cfg = test_cfg
         self.test_mode = test_mode
 
@@ -101,7 +102,7 @@ class Runner(object):
         self.optim.step()
 
         with torch.no_grad():
-            
+
             '''
             import matplotlib.pyplot as plt
             pred = (prob[0]).permute(1, 2, 0).float().cpu().numpy()[:, :, 0]
@@ -161,8 +162,9 @@ class Runner(object):
             n, c, h, w = img.size()
             probs = []
             for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
-                new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
+                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
+                new_img = F.interpolate(img, size=(new_h, new_w),
+                                        mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
 
@@ -198,11 +200,6 @@ class Runner(object):
                             optimizer=optimizer,
                             meta=meta)
 
-    def load_checkpoint(self, filename, map_location='cpu', strict=False):
-        logger.info('Resume from %s', filename)
-        return load_checkpoint(self.model, filename, map_location, strict,
-                               logger)
-
     @property
     def epoch(self):
         """int: Current epoch."""
@@ -235,25 +232,3 @@ class Runner(object):
     def iter(self, val):
         """int: Current epoch."""
         self.lr_scheduler.last_iter = val
-
-    def resume(self,
-               checkpoint,
-               resume_optimizer=False,
-               resume_lr=True,
-               resume_epoch=True,
-               map_location='default'):
-        if map_location == 'default':
-            device_id = torch.cuda.current_device()
-            checkpoint = self.load_checkpoint(
-                checkpoint,
-                map_location=lambda storage, loc: storage.cuda(device_id))
-        else:
-            checkpoint = self.load_checkpoint(checkpoint, map_location=map_location)
-        if 'optimizer' in checkpoint and resume_optimizer:
-            self.optim.load_state_dict(checkpoint['optimizer'])
-        if resume_epoch:
-            self.epoch = checkpoint['meta']['epoch']
-            self.start_epoch = self.epoch
-            self.iter = checkpoint['meta']['iter']
-        if resume_lr:
-            self.lr = checkpoint['meta']['lr']
