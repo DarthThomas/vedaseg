@@ -35,11 +35,11 @@ class Compose:
 
     def __call__(self, **kwargs):  # image, mask, detail, inverse=False
         state = deepcopy(kwargs)
-        inverse = kwargs.get("inverse", False)
+        inverse = kwargs.get('inverse', False)
         if inverse:
             details = state.pop('details', None)
-            assert details is not None, "Details not provided for inverse " \
-                                        "transform."
+            assert details is not None, 'Details not provided for inverse ' \
+                                        'transform.'
             transforms = reversed(self.transforms)
             details = reversed(details)
             for t, detail in zip(transforms, details):
@@ -47,16 +47,15 @@ class Compose:
                 state = t(**state)
             state.pop('details')
             return self.unpack(state)
-        else:
-            details = state.get('details', None)
-            if details is not None:
-                assert len(details) == 0, f"Should start recording with an " \
-                                          f"empty list while list {details} " \
-                                          f"with length '{len(details)}' " \
-                                          f"provided."
-            for t in self.transforms:
-                state = t(**state)
-            return self.unpack(state)
+
+        details = state.get('details', None)
+        if details is not None:
+            assert len(details) == 0, f'Should start recording with an empty ' \
+                                      f'list while list {details} with length' \
+                                      f' "{len(details)}" provided.'
+        for t in self.transforms:
+            state = t(**state)
+        return self.unpack(state)
 
     @staticmethod
     def unpack(state):
@@ -81,8 +80,8 @@ class FactorScale(BaseTransform):
         if scale_factor == 0:
             raise ValueError('Encountered zero scale factor.')
         if scale_factor < 0.01 or scale_factor > 100:
-            logger.warning(f"Encountered scale change larger than 100 "
-                           f"with scale factor: {scale_factor}.")
+            logger.warning(f'Encountered scale change larger than 100 '
+                           f'with scale factor: {scale_factor}.')
 
     def image_forward(self, image, **kwargs):
         scale_factor = kwargs.get('scale_factor', self.scale_factor)
@@ -129,7 +128,7 @@ class FactorScale(BaseTransform):
     def image_inverse(self, image, **kwargs):
         detail = self.load_detail(target='image', **kwargs)
         shape_orig = detail.get('shape_orig', None)
-        assert shape_orig is not None, f"Shape info not provided for transform"
+        assert shape_orig is not None, 'Shape info not provided for transform'
         new_h, new_w = shape_orig
 
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
@@ -142,7 +141,7 @@ class FactorScale(BaseTransform):
     def mask_inverse(self, mask, **kwargs):
         detail = self.load_detail(target='mask', **kwargs)
         shape_orig = detail.get('shape_orig', None)
-        assert shape_orig is not None, f"Shape info not provided for transform"
+        assert shape_orig is not None, 'Shape info not provided for transform'
         new_h, new_w = shape_orig
 
         torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
@@ -177,9 +176,9 @@ class SizeScale(FactorScale):
             scale_factor = self.get_scale_factor(mask)
             if recorded:
                 if scale_factor != self.scale_factor:
-                    raise ValueError(f"Got different scale factor between "
-                                     f"image: {self.scale_factor} and "
-                                     f"mask: {scale_factor}.")
+                    raise ValueError(f'Got different scale factor between '
+                                     f'image: {self.scale_factor} and '
+                                     f'mask: {scale_factor}.')
             else:
                 self.scale_factor = scale_factor
             recorded = True
@@ -239,7 +238,7 @@ class RandomScale(FactorScale):
 
         return scale_factor
 
-    def update_params(self, **kwargs):
+    def update_params(self):
         self.scale_factor = self.get_scale_factor(self.min_scale,
                                                   self.max_scale,
                                                   self.scale_step)
@@ -259,9 +258,9 @@ class PadIfNeeded(BaseTransform):
         h, w = shape
         if self.__class__.__name__ == 'PadIfNeeded':
             if h > self.height or w > self.width:
-                raise ValueError(f"Original image shape: {shape}, already "
-                                 f"larger than intended padding area: "
-                                 f"{self.height, self.width}")
+                raise ValueError(f'Original image shape: {shape}, already '
+                                 f'larger than intended padding area: '
+                                 f'{self.height, self.width}')
 
     def image_forward(self, image, **kwargs):
         h, w = image.shape[:2]
@@ -358,7 +357,7 @@ class RandomCrop(PadIfNeeded):
             padded = super().mask_forward(data)
             new_data = padded[y1:y2, x1:x2]
         else:
-            raise ValueError(f"Unrecognized target:{target}.")
+            raise ValueError(f'Unrecognized target:{target}.')
         return new_data
 
     def record_detail(self, target='image'):
@@ -573,8 +572,7 @@ class Normalize(BaseTransform):
                 denominator = np.reciprocal(std, dtype=data.dtype)
                 new_data = (data - mean) * denominator
             return new_data
-        else:
-            return data
+        return data
 
     def record_detail(self, target='image'):
         info = {'Normalized': True}
@@ -602,8 +600,7 @@ class ColorJitter(BaseTransform):
             new_image = self.jitter(new_image)
             new_image = np.array(new_image).astype(np.float32)
             return new_image
-        else:
-            return data
+        return data
 
     def record_detail(self, target='image'):
         info = {'Jittered': True}
