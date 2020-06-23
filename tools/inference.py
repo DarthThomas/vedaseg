@@ -39,8 +39,9 @@ def main():
 
     predictions = segmenter(image=images)
 
+    # segmenter.save_tensorrt_model()
+
     for image, prediction in zip(images, predictions):
-        print(image.shape)
         get_plot(image, prediction,
                  vis_mask=True, vis_contour=True,
                  inverse_color_channel=True, n_class=2, color_name='rainbow')

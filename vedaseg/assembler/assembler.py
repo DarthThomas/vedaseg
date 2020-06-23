@@ -41,6 +41,7 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
 
     # set working mode (training or inferencing)
     infer_mode = cfg['runner']['type'] == 'Inferencer'
+    tensorrt_mode = False
     logger.info(f'Working in {"inference" if infer_mode else "training"} mode')
 
     logger.info(f'Assemble, Step {step}, Build Dataset & Dataloader')
@@ -107,15 +108,20 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
                 loader_setting=loader.infer,
             )
         )
+        if 'tensor_rt' in cfg:
+            trt_dir = cfg['tensor_rt'].get('trt_model', None)
+            if trt_dir is not None:
+                tensorrt_mode = True
 
-    if test_mode or infer_mode:
-        cfg['resume'] = dict(checkpoint=checkpoint,
-                             resume_optimizer=False,
-                             resume_lr=False,
-                             resume_epoch=False)
+    if not tensorrt_mode:
+        if test_mode or infer_mode:
+            cfg['resume'] = dict(checkpoint=checkpoint,
+                                 resume_optimizer=False,
+                                 resume_lr=False,
+                                 resume_epoch=False)
 
-    if cfg['resume']:
-        runner.resume(**cfg['resume'])
+        if cfg['resume']:
+            runner.resume(**cfg['resume'])
 
     return runner
 

@@ -33,10 +33,10 @@ data = dict(
         ],
         loader=dict(
             batch_size=4,
-            num_workers=2,
+            num_workers=0,
             shuffle=False,
             drop_last=False,
-            pin_memory=True
+            pin_memory=False,
         ),
     )
 )
@@ -60,6 +60,8 @@ model = dict(
             out_channels=256,
             atrous_rates=[6, 12, 18],
             dropout=0.1,
+            mode='nearest',
+            align_corners=None,
         ),
     ),
     # model/decoder
@@ -77,8 +79,8 @@ model = dict(
                         type='Upsample',
                         scale_factor=4,
                         scale_bias=-3,
-                        mode='bilinear',
-                        align_corners=True,
+                        mode='nearest',
+                        # align_corners=None,
                     ),
                 ),
                 lateral=dict(
@@ -105,20 +107,22 @@ model = dict(
         upsample=dict(
             type='Upsample',
             size=(net_size, net_size),
-            mode='bilinear',
-            align_corners=True,
+            mode='nearest',
+            # align_corners=None,
         ),
     )
 )
 
-# 7. runner
-runner = dict(
-    type='Inferencer',
-)
-
-# 8. device
-gpu_id = '0'
-
 tensor_rt = dict(
-    trt_model='trt_test.engine'
+    benchmark=True,
+    shape=(1, 3, net_size, net_size),
+    dtypes=['fp32', 'fp16', 'int8'],
 )
+
+# 4. runner
+runner = dict(
+    type='Inferencer'
+)
+
+# 5. device
+gpu_id = '0'

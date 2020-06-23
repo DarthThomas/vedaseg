@@ -7,6 +7,9 @@ from torch.utils.data.dataloader import DataLoader
 from .base import BaseRunner
 from .registry import RUNNERS
 
+# from volksdep.converters import torch2trt
+# from volksdep.converters import save
+
 logger = logging.getLogger()
 
 
@@ -89,5 +92,11 @@ class Inferencer(BaseRunner):
         details = [item[1] for item in batch]
         return torch.stack(images, 0, out=out), details
 
-    def save_tensorrt_model(self):
-        pass
+    # TODO: better saving method(by using config)
+    # def save_tensorrt_model(self):
+    #     dummy_input = torch.ones(1, 3, 481, 481).cuda()
+    #
+    #     # build trt model with fp32 mode
+    #     trt_model = torch2trt(self.model, dummy_input, max_batch_size=4)
+    #
+    #     save(trt_model, 'trt_test.engine')
