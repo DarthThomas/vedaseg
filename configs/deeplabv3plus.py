@@ -23,7 +23,7 @@ img_norm_cfg = dict(mean=(123.675, 116.280, 103.530),
                     std=(58.395, 57.120, 57.375))
 ignore_label = 255
 
-dataset_type = 'VOCDataset'
+dataset_type = 'XrayDataset'
 dataset_root = '/DATA/home/tianhewang/work_spaces/seg/DATASETS/restricted_voc'
 data = dict(
     train=dict(
