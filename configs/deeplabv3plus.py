@@ -31,6 +31,7 @@ data = dict(
             type=dataset_type,
             root=dataset_root,
             imglist_name='trainaug.txt',
+            target=3,
         ),
         transforms=[
             dict(type='RandomScale', min_scale=0.5, max_scale=2.0,
@@ -57,6 +58,7 @@ data = dict(
             type=dataset_type,
             root=dataset_root,
             imglist_name='val.txt',
+            target=3,
         ),
         transforms=[
             dict(type='SizeScale', target_size=net_size),
