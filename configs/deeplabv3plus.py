@@ -13,7 +13,7 @@ logger = dict(
 )
 
 # 2. data
-net_size = 769
+net_size = 609
 test_cfg = dict(
     scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
     bias=[0.5, 0.25, 0.0, -0.25, -0.5, -0.75],
