@@ -152,9 +152,8 @@ model = dict(
 resume = None
 
 # 4. criterion
-import torch
 criterion = dict(type='CrossEntropyLoss',
-                 weight=torch.FloatTensor([0.05, 0.95]).cuda(),
+                 weight=[0.05, 0.95],
                  ignore_index=ignore_label)
 
 # 5. optim

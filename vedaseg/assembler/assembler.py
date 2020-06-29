@@ -76,6 +76,9 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
 
     logger.info('Assemble, Step 4, Build Criterion')
     # 4. criterion
+    if 'weight' in cfg['criterion']:
+        cfg['criterion']['weight'] = torch.FloatTensor(
+            cfg['criterion']['weight']).cuda()
     criterion = build_criterion(cfg['criterion'])
 
     logger.info('Assemble, Step 5, Build Optimizer')
