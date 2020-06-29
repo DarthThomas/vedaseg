@@ -1,5 +1,5 @@
 # work dir
-root_workdir = 'workdir'
+root_workdir = '/DATA/home/tianhewang/work_spaces/seg/x_ray/'
 
 # seed
 seed = 0
@@ -8,21 +8,23 @@ seed = 0
 logger = dict(
     handlers=(
         dict(type='StreamHandler', level='INFO'),
-        # dict(type='FileHandler', level='INFO'),
+        dict(type='FileHandler', level='INFO'),
     ),
 )
 
 # 2. data
+net_size = 769
 test_cfg = dict(
     scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
     bias=[0.5, 0.25, 0.0, -0.25, -0.5, -0.75],
     flip=True,
 )
-img_norm_cfg = dict(mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375))
+img_norm_cfg = dict(mean=(123.675, 116.280, 103.530),
+                    std=(58.395, 57.120, 57.375))
 ignore_label = 255
 
 dataset_type = 'VOCDataset'
-dataset_root = 'data/VOCdevkit/VOC2012'
+dataset_root = '/DATA/home/tianhewang/work_spaces/seg/DATASETS/restricted_voc'
 data = dict(
     train=dict(
         dataset=dict(
@@ -31,8 +33,11 @@ data = dict(
             imglist_name='trainaug.txt',
         ),
         transforms=[
-            dict(type='RandomScale', min_scale=0.5, max_scale=2.0, scale_step=0.25, mode='bilinear'),
-            dict(type='RandomCrop', height=513, width=513, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
+            dict(type='SizeScale', target_size=net_size),
+            dict(type='RandomCrop', height=net_size, width=net_size,
+                 image_value=img_norm_cfg['mean'], mask_value=ignore_label),
+            dict(type='PadIfNeeded', height=net_size, width=net_size,
+                 image_value=img_norm_cfg['mean'], mask_value=ignore_label),
             dict(type='HorizontalFlip', p=0.5),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
@@ -40,7 +45,7 @@ data = dict(
         loader=dict(
             type='DataLoader',
             batch_size=16,
-            num_workers=4,
+            num_workers=2,
             shuffle=True,
             drop_last=True,
             pin_memory=True,
@@ -53,13 +58,15 @@ data = dict(
             imglist_name='val.txt',
         ),
         transforms=[
-            dict(type='PadIfNeeded', height=513, width=513, image_value=img_norm_cfg['mean'], mask_value=ignore_label),
+            dict(type='SizeScale', target_size=net_size),
+            dict(type='PadIfNeeded', height=net_size, width=net_size,
+                 image_value=img_norm_cfg['mean'], mask_value=ignore_label),
             dict(type='Normalize', **img_norm_cfg),
             dict(type='ToTensor'),
         ],
         loader=dict(
             type='DataLoader',
-            batch_size=8,
+            batch_size=16,
             num_workers=4,
             shuffle=False,
             drop_last=False,
@@ -69,13 +76,13 @@ data = dict(
 )
 
 # 3. model
-nclasses = 21
+nclasses = 2
 model = dict(
     # model/encoder
     encoder=dict(
         backbone=dict(
             type='ResNet',
-            arch='resnet101',
+            arch='resnet50',
             replace_stride_with_dilation=[False, False, True],
             multi_grid=[1, 2, 4],
         ),
@@ -131,7 +138,7 @@ model = dict(
         num_convs=2,
         upsample=dict(
             type='Upsample',
-            size=(513, 513),
+            size=(net_size, net_size),
             mode='bilinear',
             align_corners=True,
         ),
@@ -145,7 +152,7 @@ resume = None
 criterion = dict(type='CrossEntropyLoss', ignore_index=ignore_label)
 
 # 5. optim
-optimizer = dict(type='SGD', lr=0.007, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.014, momentum=0.9, weight_decay=0.0001)
 
 # 6. lr scheduler
 max_epochs = 50
@@ -155,9 +162,9 @@ lr_scheduler = dict(type='PolyLR', max_epochs=max_epochs)
 runner = dict(
     type='Runner',
     max_epochs=max_epochs,
-    trainval_ratio=1,
+    trainval_ratio=5,
     snapshot_interval=5,
 )
 
 # 8. device
-gpu_id = '0,1'
+gpu_id = '8, 9'
