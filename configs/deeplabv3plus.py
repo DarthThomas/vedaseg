@@ -33,7 +33,8 @@ data = dict(
             imglist_name='trainaug.txt',
         ),
         transforms=[
-            dict(type='SizeScale', target_size=net_size),
+            dict(type='RandomScale', min_scale=0.5, max_scale=2.0,
+                 scale_step=0.25, mode='bilinear'),
             dict(type='RandomCrop', height=net_size, width=net_size,
                  image_value=img_norm_cfg['mean'], mask_value=ignore_label),
             dict(type='PadIfNeeded', height=net_size, width=net_size,

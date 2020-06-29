@@ -16,7 +16,7 @@ class XrayDataset(BaseDataset):
     """
     """
 
-    def __init__(self, imglist_name, root, transform, target=3):
+    def __init__(self, imglist_name, root, transform, target=None):
         super().__init__()
 
         imglist_fp = '%s/ImageSets/Segmentation/%s' % (root, imglist_name)
@@ -42,6 +42,22 @@ class XrayDataset(BaseDataset):
 
     def __len__(self):
         return len(self.imglist)
+
+    def read_masks(self, imgname):
+        if self.target_class is None:
+            masks = []
+            for i in range(5):
+                mask_fp = os.path.join(self.root,
+                                       'EncodeSegmentationClass',
+                                       imgname) + f'_{i + 1}.png'
+                mask = np.array(Image.open(mask_fp), dtype=np.float32)
+
+        elif isinstance(self.target_class, int):
+            mask_fp = os.path.join(self.root,
+                                   'EncodeSegmentationClass',
+                                   imgname) + f'_{self.target_class}.png'
+            mask = np.array(Image.open(mask_fp), dtype=np.float32)
+            return mask
 
     @staticmethod
     def read_imglist(imglist_fp):
