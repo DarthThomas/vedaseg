@@ -1,11 +1,10 @@
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import logging
 
-from vedaseg.utils import build_from_cfg
-from ..utils import build_module, ConvModules
+import torch
+import torch.nn as nn
+
 from .registry import HEADS
+from ..utils import ConvModules, build_module
 from ..weight_init import init_weights
 
 logger = logging.getLogger()
@@ -17,6 +16,7 @@ class Head(nn.Module):
 
     Args:
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -26,7 +26,8 @@ class Head(nn.Module):
                  act_cfg=dict(type='Relu', inplace=True),
                  num_convs=0,
                  upsample=None,
-                 dropouts=None):
+                 dropouts=None,
+                 custom_init=None):
         super().__init__()
 
         if num_convs > 0:
@@ -51,6 +52,9 @@ class Head(nn.Module):
         self.block = nn.Sequential(*layers)
         logger.info('Head init weights')
         init_weights(self.modules())
+        if custom_init is not None:
+            self.block[-1].bias = nn.Parameter(
+                torch.Tensor(custom_init))  # noqa
 
     def forward(self, x):
         feat = self.block(x)
