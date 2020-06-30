@@ -14,15 +14,25 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Inference with VedaSeg')
     parser.add_argument('--config', help='config file path',
                         default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
-                                '/configs/d3p_481.py')
+                                '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
-                        default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
-                                '/vedaseg/model/epoch_50.pth')
+                        default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
+                                'vedaseg/model/x_ray/WCE/epoch_50.pth')
     parser.add_argument('--img_dir', help='infer image path',
-                        default='/media/yuhaoye/DATA7/datasets/kfc_data_temp/'
-                                'one_batch_35/')
+                        default='/media/yuhaoye/DATA7/datasets/x-ray/'
+                                'jinnan2_round2_train_20190401/'
+                                'jinnan2_round2_train_20190401/'
+                                'restricted_voc/JPEGImages/')
     args = parser.parse_args()
     return args
+
+
+def read_imglist(imglist_fp):
+    ll = []
+    with open(imglist_fp, 'r') as fd:
+        for line in fd:
+            ll.append(f'{line.strip()}.jpg')
+    return ll
 
 
 def main():
@@ -31,10 +41,18 @@ def main():
     checkpoint = args.checkpoint
     img_dir = args.img_dir
 
+    val_set_dir = ('/media/yuhaoye/DATA7/datasets/x-ray'
+                   '/jinnan2_round2_train_20190401/'
+                   'jinnan2_round2_train_20190401'
+                   '/restricted_voc/ImageSets/Segmentation/val.txt')
+    img_list = set(read_imglist(val_set_dir)[:50])
+
     segmenter = assemble(cfg_fp, checkpoint)
 
     images = []
     for image in os.listdir(img_dir):
+        if image not in img_list:
+            continue
         images.append(get_image(img_dir + image, order='BGR'))
 
     predictions = segmenter(image=images)
