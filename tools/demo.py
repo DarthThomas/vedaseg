@@ -13,16 +13,12 @@ from vedaseg.utils import get_image, get_plot
 def parse_args():
     parser = argparse.ArgumentParser(description='Inference with VedaSeg')
     parser.add_argument('--config', help='config file path',
-                        default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
+                        default='/home/tianhe/Demo/vedaseg'
                                 '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
-                        default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
-                                'vedaseg/model/x_ray/WCE_INIT/epoch_150.pth')
+                        default='/home/tianhe/Demo/models/epoch_150.pth')
     parser.add_argument('--img_dir', help='infer image path',
-                        default='/media/yuhaoye/DATA7/datasets/x-ray/'
-                                'jinnan2_round2_train_20190401/'
-                                'jinnan2_round2_train_20190401/'
-                                'restricted_voc/JPEGImages/752.jpg')
+                        default='/home/tianhe/Demo/samples/752.jpg')
     args = parser.parse_args()
     return args
 
