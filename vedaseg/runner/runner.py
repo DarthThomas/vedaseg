@@ -5,6 +5,7 @@ from collections.abc import Iterable
 import numpy as np
 import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 from .registry import RUNNERS
@@ -51,7 +52,7 @@ class Runner(object):
 
     def __call__(self, search=None):
         if search is not None:
-            for thres in search:
+            for thres in tqdm(search):
                 self.search_epoch(thres)
         elif self.test_mode:
             self.test_epoch()
@@ -83,10 +84,15 @@ class Runner(object):
             self.validate_batch(img, label)
 
     def search_epoch(self, thres):
-        logger.info('Thres %f, Start validating' % thres)
+        # logger.info('Thres %f, Start validating' % thres)
         self.metric.reset()
-        for img, label in self.loader['val']:
+        miou, ious = self.metric.miou()
+        for img, label in tqdm(self.loader['val'],
+                               desc=f'Thres={thres}',
+                               dynamic_ncols=True):
             self.search_batch(img, label, thres)
+        miou, ious = self.metric.miou()
+        logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
 
     def test_epoch(self):
         logger.info('Start testing')
@@ -200,12 +206,12 @@ class Runner(object):
             if thres is None:
                 _, pred_label = torch.max(prob, dim=1)
             else:
-                pred_label = prob[:, 1, :, :]
-                print(pred_label.shape)
-                assert 1 == 0
+                prob = prob[:, 1, :, :]
+                pred_label = torch.zeros_like(prob).long()
+                pred_label[prob >= thres] = 1
             self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
-            miou, ious = self.metric.miou()
-            logger.info('Validate, mIoU %.4f, IoUs %s' % (miou, ious))
+            # miou, ious = self.metric.miou()
+            # logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
 
     def save_checkpoint(self,
                         out_dir,
