@@ -19,17 +19,17 @@ def get_plot(img_, pd, vis_mask=False, vis_contour=True, output_dir=None,
         img = img_.copy()
 
     cmap = plt.cm.get_cmap(color_name, n_class)
-    plt.figure(figsize=(8, 6))
-    plt.suptitle('Prediction:')
+    plt.figure(figsize=(16, 12))
+    plt.suptitle('X-ray image inspection: Knife')
     plt.tight_layout()
 
     plt.subplot(121)
-    plt.title('input image')
+    plt.title('Input Image')
     plt.imshow(img)
     plt.axis('off')
 
     plt.subplot(122)
-    plt.title('image with prediction')
+    plt.title('Image with Prediction')
     img = process_res(img, pd, cmap, class_id=None, vis_mask=vis_mask,
                       vis_contour=vis_contour)
     plt.imshow(img)
