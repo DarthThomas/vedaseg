@@ -33,10 +33,10 @@ def main():
     checkpoint = args.checkpoint
     img_dir = args.img_dir
 
-    segmenter = assemble(cfg_fp, checkpoint)
+    knife_inspector = assemble(cfg_fp, checkpoint)
 
     image = get_image(img_dir, order='RGB')
-    prediction = segmenter(image=image, thres=None)
+    prediction = knife_inspector(image=image, thres=None)
 
     get_plot(image, prediction, vis_mask=True, vis_contour=True,
              inverse_color_channel=False, n_class=2, color_name='autumn')
