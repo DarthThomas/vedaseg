@@ -17,7 +17,7 @@ def parse_args():
                                 '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
                         default='/home/tianhe/Demo/models/epoch_150.pth')
-    parser.add_argument('--img_dir', help='infer image path',
+    parser.add_argument('--img_path', help='infer image path',
                         default='/home/tianhe/Demo/samples/752.jpg')
     args = parser.parse_args()
     return args
@@ -27,11 +27,11 @@ def main():
     args = parse_args()
     cfg_fp = args.config
     checkpoint = args.checkpoint
-    img_dir = args.img_dir
+    img_path = args.img_path
 
     knife_inspector = assemble(cfg_fp, checkpoint)
 
-    image = get_image(img_dir, order='RGB')
+    image = get_image(img_path, order='RGB')
     prediction = knife_inspector(image=image, thres=None)
 
     get_plot(image, prediction, vis_mask=True, vis_contour=True,
