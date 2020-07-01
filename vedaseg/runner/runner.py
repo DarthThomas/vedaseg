@@ -1,12 +1,12 @@
-import torch
 import logging
 import os.path as osp
-import torch.nn.functional as F
-import numpy as np
 from collections.abc import Iterable
 
-from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
+import numpy as np
+import torch
+import torch.nn.functional as F
 
+from vedaseg.utils.checkpoint import load_checkpoint, save_checkpoint
 from .registry import RUNNERS
 
 np.set_printoptions(precision=4)
@@ -49,8 +49,11 @@ class Runner(object):
         self.test_cfg = test_cfg
         self.test_mode = test_mode
 
-    def __call__(self):
-        if self.test_mode:
+    def __call__(self, search=None):
+        if search is not None:
+            for thres in search:
+                self.search_epoch(thres)
+        elif self.test_mode:
             self.test_epoch()
         else:
             assert self.trainval_ratio > 0
@@ -78,6 +81,12 @@ class Runner(object):
         self.metric.reset()
         for img, label in self.loader['val']:
             self.validate_batch(img, label)
+
+    def search_epoch(self, thres):
+        logger.info('Thres %f, Start validating' % thres)
+        self.metric.reset()
+        for img, label in self.loader['val']:
+            self.search_batch(img, label, thres)
 
     def test_epoch(self):
         logger.info('Start testing')
@@ -177,6 +186,26 @@ class Runner(object):
             self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
             miou, ious = self.metric.miou()
             logger.info('Test, mIoU %.4f, IoUs %s' % (miou, ious))
+
+    def search_batch(self, img, label, thres=None):
+        self.model.eval()
+        with torch.no_grad():
+            if self.gpu:
+                img = img.cuda()
+                label = label.cuda()
+
+            pred = self.model(img)
+
+            prob = pred.softmax(dim=1)
+            if thres is None:
+                _, pred_label = torch.max(prob, dim=1)
+            else:
+                pred_label = prob[:, 1, :, :]
+                print(pred_label.shape)
+                assert 1 == 0
+            self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+            miou, ious = self.metric.miou()
+            logger.info('Validate, mIoU %.4f, IoUs %s' % (miou, ious))
 
     def save_checkpoint(self,
                         out_dir,
