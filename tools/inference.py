@@ -17,7 +17,7 @@ def parse_args():
                                 '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
                         default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
-                                'vedaseg/model/x_ray/WCE/epoch_50.pth')
+                                'vedaseg/model/x_ray/WCE_INIT/epoch_150.pth')
     parser.add_argument('--img_dir', help='infer image path',
                         default='/media/yuhaoye/DATA7/datasets/x-ray/'
                                 'jinnan2_round2_train_20190401/'

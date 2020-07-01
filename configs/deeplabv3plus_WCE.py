@@ -166,6 +166,7 @@ model = dict(
             mode='bilinear',
             align_corners=True,
         ),
+        custom_init=[1.55, -1.55],
     )
 )
 
