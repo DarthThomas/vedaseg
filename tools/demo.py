@@ -11,7 +11,7 @@ from vedaseg.utils import get_image, get_plot
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Inference with VedaSeg')
+    parser = argparse.ArgumentParser(description='X-ray inspect demo')
     parser.add_argument('--config', help='config file path',
                         default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
                                 '/configs/deeplabv3plus_WCE.py')
@@ -46,35 +46,29 @@ def main():
                    'jinnan2_round2_train_20190401'
                    '/restricted_voc/ImageSets/Segmentation/val.txt')  #
     # trainaug.txt
-    img_list = read_imglist(val_set_dir)[105:110]
+    img_list = read_imglist(val_set_dir)[:50]
 
     segmenter = assemble(cfg_fp, checkpoint)
 
-    images = []
+    images, fns = [], []
     for image in img_list:
+        fns.append()
         images.append(get_image(img_dir + image, order='BGR'))
+        # break
 
-    predictions = segmenter(image=images, thres=0.4)
+    predictions = segmenter(image=images, thres=0.625)
 
     for image, prediction in zip(images, predictions):
         get_plot(image, prediction, vis_mask=True, vis_contour=True,
-                 inverse_color_channel=True, n_class=2, color_name='autumn')
+                 inverse_color_channel=True, n_class=2, color_name='rainbow')
 
-    images = []
-    for image in img_list:
-        images.append(get_image(img_dir + image, order='RGB'))
-
-    for image in images:
-        prediction = segmenter(image=image, thres=0.4)
-        get_plot(image, prediction, vis_mask=True, vis_contour=True,
-                 inverse_color_channel=False, n_class=2, color_name='autumn')
-
-    # for image in img_list:
-    #     print(img_dir + image)
-    #     prediction = segmenter(image=get_image(img_dir + image, order='RGB'),
-    #                            thres=0.625)
-    #     get_plot(image, prediction, vis_mask=True, vis_contour=True,
+    # for idx, image in enumerate(images):
+    #     prediction = segmenter(image=image, thres=0.625)
+    #     get_plot(image, prediction,
+    #              vis_mask=True, vis_contour=True,
     #              inverse_color_channel=True, n_class=2, color_name='rainbow')
+    #     if idx > 8:
+    #         break
 
 
 if __name__ == '__main__':

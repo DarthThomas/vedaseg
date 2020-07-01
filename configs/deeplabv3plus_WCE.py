@@ -30,7 +30,7 @@ dataset_root = ('/media/yuhaoye/DATA7/datasets/x-ray/'
 data = dict(
     infer=dict(
         dataset=dict(
-            type='KFCDataset', imglist=[],
+            type='KFCDataset', imglist=[], in_order='RGB'
         ),
         transforms=[
             dict(type='SizeScale', target_size=net_size),

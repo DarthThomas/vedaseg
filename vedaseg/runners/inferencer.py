@@ -33,8 +33,9 @@ class Inferencer(BaseRunner):
         self.infer_tf = infer_tf
         self.infer_dataset = infer_dataset
         self.loader_setting = loader_setting
+        self.model.eval()
 
-    def __call__(self, image=None):
+    def __call__(self, image=None, thres=0.625):
         if isinstance(image, list):
             logger.debug(f'Entered with batch finer mode with '
                          f'a list of {len(image)} images.')
@@ -48,40 +49,53 @@ class Inferencer(BaseRunner):
                          f'{self.loader_setting}')
             res = []
             for images, details in loader:
-                res.extend(self.infer_batch(images, details))
+                res.extend(self.infer_batch(images, details, thres=thres))
             logger.debug(f'Inference done with {len(res)} masks.')
 
         else:
             logger.debug('Entered with single image finer mode.')
             image, details = self.infer_tf(image=image.astype(np.float32),
                                            details=[])
-            res = self.infer_img(image, details)
+            res = self.infer_img(image, details, thres=thres)
             logger.debug('Inference done with single image.')
         return res
 
-    def infer_batch(self, images, details):
+    def infer_batch(self, images, details, thres=None):
         res = []
         with torch.no_grad():
             if self.gpu:
                 images = images.cuda()
             prob = self.model(images)
-        _, pred_label = torch.max(prob, dim=1)
+
+        if thres is None:
+            _, pred_label = torch.max(prob, dim=1)
+        else:
+            prob = prob.softmax(dim=1)[:, 1, :, :]
+            pred_label = torch.zeros_like(prob).long()
+            pred_label[prob >= thres] = 1
+
         for pred, detail in zip(pred_label, details):
             res.append(self.infer_tf(mask=pred.float(),
                                      details=detail,
                                      inverse=True))
         return res
 
-    def infer_img(self, image, details):
+    def infer_img(self, image, details, thres=None):
         with torch.no_grad():
             if self.gpu:
                 image = image.cuda()
             prob = self.model(image.unsqueeze(0))
-        _, pred_label = torch.max(prob, dim=1)
+        if thres is None:
+            _, pred_label = torch.max(prob, dim=1)
+        else:
+            prob = prob.softmax(dim=1)[:, 1, :, :]
+            pred_label = torch.zeros_like(prob).long()
+            pred_label[prob >= thres] = 1
+
         mask = self.infer_tf(mask=pred_label[0].float(),
                              details=details,
                              inverse=True)
-        return mask[0]
+        return mask
 
     @staticmethod
     def my_collate(batch):

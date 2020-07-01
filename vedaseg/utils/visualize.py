@@ -15,6 +15,8 @@ def get_plot(img_, pd, vis_mask=False, vis_contour=True, output_dir=None,
              inverse_color_channel=False, n_class=2, color_name='ocean'):
     if inverse_color_channel:
         img = cv2.cvtColor(img_, cv2.COLOR_BGR2RGB)
+    else:
+        img = img_.copy()
 
     cmap = plt.cm.get_cmap(color_name, n_class)
     plt.figure(figsize=(8, 6))
@@ -63,7 +65,7 @@ def image_overlay(image, mask, color, class_id=1):
     overlay_img = image.copy()
     heat_map = np.zeros_like(image)
     heat_map[mask == class_id] = color
-    fin = cv2.addWeighted(heat_map, -0.8, overlay_img, 1, 0)
+    fin = cv2.addWeighted(heat_map, 0.8, overlay_img, 0.8, 0)
     return fin
 
 
