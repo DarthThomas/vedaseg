@@ -90,8 +90,8 @@ data = dict(
         ],
         loader=dict(
             type='DataLoader',
-            batch_size=16,
-            num_workers=4,
+            batch_size=1,
+            num_workers=1,
             shuffle=False,
             drop_last=False,
             pin_memory=True,
