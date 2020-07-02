@@ -1,5 +1,6 @@
 import logging
 import os.path as osp
+import sys
 from collections.abc import Iterable
 
 import numpy as np
@@ -28,8 +29,8 @@ class Runner(object):
                  metric,
                  optim,
                  lr_scheduler,
-                 max_epochs,
-                 workdir,
+                 max_epochs=50,
+                 workdir=None,
                  start_epoch=0,
                  trainval_ratio=1,
                  snapshot_interval=1,
@@ -51,13 +52,26 @@ class Runner(object):
         self.test_cfg = test_cfg
         self.test_mode = test_mode
 
-    def __call__(self, search=None, ap_ana=None):
+    def __call__(self, search=None, ap_ana=False,
+                 conf_thresholds=None, iou_thresholds=None, base_on_conf=False):
+        # if ap_ana:
+        #     self.ana_pred = np.zeros(shape=(len(conf_thresholds),
+        #                                     len(iou_thresholds),
+        #                                     len(self.loader['val'])))
+        #     p, r = self.judge_eopch(conf_thresholds=conf_thresholds,
+        #                             iou_thresholds=iou_thresholds)
+        #     with np.printoptions(precision=4, suppress=True):
+        #         print('precision:')
+        #         print(p)
+        #         print('recall:')
+        #         print(r)
         if ap_ana is not None:
             total_samples = len(self.loader['val'])
             total_thres = len(ap_ana)
             self.ana_gt = np.zeros(total_samples)
             self.ana_pred = np.zeros(shape=(total_thres, total_samples))
-            self.search_epoch(ap_ana)
+            for conf in np.arange(0.1, 1.0, 0.1):  # np.arange(0.1, 1.0, 0.1):
+                self.ana_epoch(ap_ana, conf=conf)
         elif search is not None:
             for thres in tqdm(search):
                 self.search_epoch(thres)
@@ -90,34 +104,41 @@ class Runner(object):
         for img, label in self.loader['val']:
             self.validate_batch(img, label)
 
-    def ana_epoch(self, thres):
-        for sample_id, img, label in enumerate(tqdm(self.loader['val'],
-                                                    desc=f'AP testing',
-                                                    dynamic_ncols=True)):
-            if torch.max(label) > 0:
+    def ana_epoch(self, thres, conf):
+        for sample_id, (img, label) in enumerate(tqdm(self.loader['val'])):
+
+            if 1 in label:
                 self.ana_gt[sample_id] = 1
 
             self.metric.reset()
-            self.ana_batch(img, label)
+            pred, gt = self.ana_batch(img, label, conf=conf)
+
             _, ious = self.metric.miou()
             self.metric.reset()
+
             iou = ious[-1]
-            for thres_id, threshold in enumerate(tqdm(thres,
-                                                      dynamic_ncols=True)):
-                if iou >= threshold:
+
+            #     print(f'iou={iou}, gt={self.ana_gt[sample_id]}')
+            for thres_id, threshold in enumerate(thres):
+                if (1 in pred) and (1 not in gt):
+                    assert (1 not in gt) == (1 not in label)
+                    self.ana_pred[thres_id, sample_id] = 1
+                elif iou >= threshold:
                     self.ana_pred[thres_id, sample_id] = 1
 
         total_p, total_r = [], []
-        for thres_id, threshold in enumerate(tqdm(thres,
-                                                  dynamic_ncols=True)):
-            tqdm.write(f"Threshold@{threshold}:")
+
+        for thres_id, threshold in enumerate(thres):
             p, r = self.ana_ap(self.ana_gt, self.ana_pred[thres_id, :])
-            tqdm.write(f"{' ' * 4}Precision: {p},  Recall:{r}")
+            tqdm.write(f"Threshold@{threshold:.2f}: "
+                       f"{' ' * 4}"
+                       f"Precision: {p:.4f},  Recall:{r:.4f}")
             total_p.append(p)
             total_r.append(r)
         total_p = np.array(total_p)
         total_r = np.array(total_r)
-        print(f'Average P:{np.mean(total_p)}, Average r:{np.mean(total_r)}')
+        tqdm.write(f'Average P:{np.mean(total_p):.3f}, '
+                   f'Average R:{np.mean(total_r):.3f}')
 
     @staticmethod
     def ana_ap(gt, pred):
@@ -132,8 +153,30 @@ class Runner(object):
                 fn += 1
             else:
                 fp += 1
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
+        precision = tp / (tp + fp + sys.float_info.min)
+        recall = tp / (tp + fn + sys.float_info.min)
+        return precision, recall
+
+    def judge_eopch(self, conf_thresholds=None, iou_thresholds=None):
+        c_l, i_l, s_l = len(conf_thresholds), \
+                        len(iou_thresholds), \
+                        len(self.loader['val'])
+        precision = np.zeros(shape=(c_l, i_l))
+        recall = np.zeros_like(precision)
+        total_res = np.zeros(shape=(c_l, i_l, s_l))
+        gt = np.zeros(len(self.loader['val']))
+        for sample_id, (img, label) in enumerate(tqdm(self.loader['val'])):
+            res = self.judge_batch(img, label, conf_thresholds=conf_thresholds,
+                                   iou_thresholds=iou_thresholds)
+            total_res[:, :, sample_id] = res
+            if 1 in label:
+                gt[sample_id] = 1
+
+        for conf_idx, conf_thres in enumerate(conf_thresholds):
+            for iou_idx, iou_thres in enumerate(iou_thresholds):
+                p, r = self.ana_ap(gt, total_res[conf_idx, iou_idx, :])
+                precision[conf_idx, iou_idx] = p
+                recall[conf_idx, iou_idx] = r
         return precision, recall
 
     def search_epoch(self, thres):
@@ -267,7 +310,7 @@ class Runner(object):
             # miou, ious = self.metric.miou()
             # logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
 
-    def ana_batch(self, img, label):
+    def ana_batch(self, img, label, conf=None):
         self.model.eval()
         with torch.no_grad():
             if self.gpu:
@@ -276,8 +319,59 @@ class Runner(object):
 
             pred = self.model(img)
             prob = pred.softmax(dim=1)
-            _, pred_label = torch.max(prob, dim=1)
+            if conf is None:
+                _, pred_label = torch.max(prob, dim=1)
+            else:
+                prob = prob[:, 1, :, :]
+                pred_label = torch.zeros_like(prob).long()
+                pred_label[prob > conf] = 1
+            # if 1 not in label:
+            #     p = pred_label.detach().clone()
+            #     assert 1 == 0, f'{torch.sum(p), (p.size(1) * p.size(2))}'
             self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+            return pred_label, label
+
+    def judge_batch(self,
+                    img, label,
+                    conf_thresholds=None, iou_thresholds=None):
+
+        res = np.zeros((len(conf_thresholds), len(iou_thresholds)))
+        self.model.eval()
+        with torch.no_grad():
+            if self.gpu:
+                img = img.cuda()
+                label = label.cuda()
+
+            pred = self.model(img)
+            prob = pred.softmax(dim=1)
+        for idx_c, conf_th in enumerate(conf_thresholds):
+            for idx_i, iou_th in enumerate(iou_thresholds):
+                res[idx_c, idx_i] = self.judge_conf_map(prob, label,
+                                                        conf_thres=conf_th,
+                                                        iou_thres=iou_th)
+        return res
+
+    def judge_conf_map(self, conf_map, label, conf_thres=None, iou_thres=0.5):
+        self.metric.reset()
+
+        if conf_thres is None:
+            _, pred_label = torch.max(conf_map, dim=1)
+        else:
+            prob = conf_map[:, 1, :, :]
+            pred_label = torch.zeros_like(prob).long()
+            pred_label[prob > conf_thres] = 1
+
+        if (1 not in label) and (1 in pred_label):
+            return 1
+
+        self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
+        _, ious = self.metric.miou()
+
+        fg_iou = ious[-1]
+
+        if fg_iou > iou_thres:
+            return 1
+        return 0
 
     def save_checkpoint(self,
                         out_dir,

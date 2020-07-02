@@ -78,7 +78,7 @@ data = dict(
         dataset=dict(
             type=dataset_type,
             root=dataset_root,
-            imglist_name='val.txt',
+            imglist_name='val.txt',  # 'trainaug.txt',
             target=3,
         ),
         transforms=[
@@ -187,7 +187,7 @@ lr_scheduler = dict(type='PolyLR', max_epochs=max_epochs)
 
 # 7. runner
 runner = dict(
-    type='Inferencer',
+    type='Runner',
 )
 
 # 8. device
