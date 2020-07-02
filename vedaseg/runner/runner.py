@@ -105,7 +105,6 @@ class Runner(object):
             self.validate_batch(img, label)
 
     def ana_epoch(self, thres, conf):
-        ious_ = np.zeros(len(self.loader['val']))
         for sample_id, (img, label) in enumerate(tqdm(self.loader['val'],
                                                       desc=f'Confidence='
                                                            f'{conf:.1f}',
@@ -117,15 +116,15 @@ class Runner(object):
 
             _, ious = self.metric.miou()
             iou = ious[-1]
-            ious_[sample_id] = ious[-1]
             for thres_id, threshold in enumerate(thres):
                 if (1 in pred) and (1 not in gt):
                     self.ana_pred[thres_id, sample_id] = 1
                 elif iou > threshold:
                     self.ana_pred[thres_id, sample_id] = 1
+                else:
+                    self.ana_pred[thres_id, sample_id] = 0
 
-        total_p, total_r = np.zeros(len(thres)), np.zeros(len(thres))
-        tqdm.write(f'{self.ana_pred[:, :10]}')
+        total_p, total_r = np.zeros_like(thres), np.zeros_like(thres)
 
         for thres_id, threshold in enumerate(thres):
             p, r = self.ana_ap(self.ana_gt, self.ana_pred[thres_id, :])
