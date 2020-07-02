@@ -20,6 +20,7 @@ class Runner(object):
     """ Runner
 
     """
+
     def __init__(self,
                  loader,
                  model,
@@ -50,8 +51,14 @@ class Runner(object):
         self.test_cfg = test_cfg
         self.test_mode = test_mode
 
-    def __call__(self, search=None):
-        if search is not None:
+    def __call__(self, search=None, ap_ana=None):
+        if ap_ana is not None:
+            total_samples = len(self.loader['val'])
+            total_thres = len(ap_ana)
+            self.ana_gt = np.zeros(total_samples)
+            self.ana_pred = np.zeros(shape=(total_thres, total_samples))
+            self.search_epoch(ap_ana)
+        elif search is not None:
             for thres in tqdm(search):
                 self.search_epoch(thres)
         elif self.test_mode:
@@ -83,15 +90,61 @@ class Runner(object):
         for img, label in self.loader['val']:
             self.validate_batch(img, label)
 
+    def ana_epoch(self, thres):
+        for sample_id, img, label in enumerate(tqdm(self.loader['val'],
+                                                    desc=f'AP testing',
+                                                    dynamic_ncols=True)):
+            if torch.max(label) > 0:
+                self.ana_gt[sample_id] = 1
+
+            self.metric.reset()
+            self.ana_batch(img, label)
+            _, ious = self.metric.miou()
+            self.metric.reset()
+            iou = ious[-1]
+            for thres_id, threshold in enumerate(tqdm(thres,
+                                                      dynamic_ncols=True)):
+                if iou >= threshold:
+                    self.ana_pred[thres_id, sample_id] = 1
+
+        total_p, total_r = [], []
+        for thres_id, threshold in enumerate(tqdm(thres,
+                                                  dynamic_ncols=True)):
+            tqdm.write(f"Threshold@{threshold}:")
+            p, r = self.ana_ap(self.ana_gt, self.ana_pred[thres_id, :])
+            tqdm.write(f"{' ' * 4}Precision: {p},  Recall:{r}")
+            total_p.append(p)
+            total_r.append(r)
+        total_p = np.array(total_p)
+        total_r = np.array(total_r)
+        print(f'Average P:{np.mean(total_p)}, Average r:{np.mean(total_r)}')
+
+    @staticmethod
+    def ana_ap(gt, pred):
+        tp, tn, fp, fn = 0, 0, 0, 0
+        assert len(gt) == len(pred)
+        for gt_, pred_ in zip(gt, pred):
+            if gt_ == pred_ == 1:
+                tp += 1
+            elif gt_ == pred_ == 0:
+                tn += 1
+            elif gt_ == 1:
+                fn += 1
+            else:
+                fp += 1
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        return precision, recall
+
     def search_epoch(self, thres):
         # logger.info('Thres %f, Start validating' % thres)
-        self.metric.reset()
-        miou, ious = self.metric.miou()
+
         for img, label in tqdm(self.loader['val'],
                                desc=f'Thres={thres}',
                                dynamic_ncols=True):
+            self.metric.reset()
             self.search_batch(img, label, thres)
-        miou, ious = self.metric.miou()
+            miou, ious = self.metric.miou()
         logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
 
     def test_epoch(self):
@@ -116,7 +169,7 @@ class Runner(object):
         self.optim.step()
 
         with torch.no_grad():
-            
+
             '''
             import matplotlib.pyplot as plt
             pred = (prob[0]).permute(1, 2, 0).float().cpu().numpy()[:, :, 0]
@@ -176,8 +229,9 @@ class Runner(object):
             n, c, h, w = img.size()
             probs = []
             for scale, bias in zip(scales, biases):
-                new_h, new_w = int(h*scale + bias), int(w*scale+bias)
-                new_img = F.interpolate(img, size=(new_h, new_w), mode='bilinear', align_corners=True)
+                new_h, new_w = int(h * scale + bias), int(w * scale + bias)
+                new_img = F.interpolate(img, size=(new_h, new_w),
+                                        mode='bilinear', align_corners=True)
                 prob = self.model(new_img).softmax(dim=1)
                 probs.append(prob)
 
@@ -212,6 +266,18 @@ class Runner(object):
             self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
             # miou, ious = self.metric.miou()
             # logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
+
+    def ana_batch(self, img, label):
+        self.model.eval()
+        with torch.no_grad():
+            if self.gpu:
+                img = img.cuda()
+                label = label.cuda()
+
+            pred = self.model(img)
+            prob = pred.softmax(dim=1)
+            _, pred_label = torch.max(prob, dim=1)
+            self.metric.add(pred_label.cpu().numpy(), label.cpu().numpy())
 
     def save_checkpoint(self,
                         out_dir,
@@ -283,7 +349,8 @@ class Runner(object):
                 checkpoint,
                 map_location=lambda storage, loc: storage.cuda(device_id))
         else:
-            checkpoint = self.load_checkpoint(checkpoint, map_location=map_location)
+            checkpoint = self.load_checkpoint(checkpoint,
+                                              map_location=map_location)
         if 'optimizer' in checkpoint and resume_optimizer:
             self.optim.load_state_dict(checkpoint['optimizer'])
         if resume_epoch:
