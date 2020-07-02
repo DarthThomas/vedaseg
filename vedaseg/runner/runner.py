@@ -54,24 +54,24 @@ class Runner(object):
 
     def __call__(self, search=None, ap_ana=False,
                  conf_thresholds=None, iou_thresholds=None, base_on_conf=False):
-        # if ap_ana:
-        #     self.ana_pred = np.zeros(shape=(len(conf_thresholds),
-        #                                     len(iou_thresholds),
-        #                                     len(self.loader['val'])))
-        #     p, r = self.judge_eopch(conf_thresholds=conf_thresholds,
-        #                             iou_thresholds=iou_thresholds)
-        #     with np.printoptions(precision=4, suppress=True):
-        #         print('precision:')
-        #         print(p)
-        #         print('recall:')
-        #         print(r)
-        if ap_ana is not None:
-            total_samples = len(self.loader['val'])
-            total_thres = len(ap_ana)
-            self.ana_gt = np.zeros(total_samples)
-            self.ana_pred = np.zeros(shape=(total_thres, total_samples))
-            for conf in np.arange(0.1, 1.0, 0.1):  # np.arange(0.1, 1.0, 0.1):
-                self.ana_epoch(ap_ana, conf=conf)
+        if ap_ana:
+            self.ana_pred = np.zeros(shape=(len(conf_thresholds),
+                                            len(iou_thresholds),
+                                            len(self.loader['val'])))
+            p, r = self.judge_eopch(conf_thresholds=conf_thresholds,
+                                    iou_thresholds=iou_thresholds)
+            with np.printoptions(precision=4, suppress=True):
+                print('precision:')
+                print(p)
+                print('recall:')
+                print(r)
+        # if ap_ana is not None:
+        #     total_samples = len(self.loader['val'])
+        #     total_thres = len(ap_ana)
+        #     self.ana_gt = np.zeros(total_samples)
+        #     self.ana_pred = np.zeros(shape=(total_thres, total_samples))
+        #     for conf in np.arange(0.1, 1.0, 0.1):  # np.arange(0.1, 1.0, 0.1):
+        #         self.ana_epoch(ap_ana, conf=conf)
         elif search is not None:
             for thres in tqdm(search):
                 self.search_epoch(thres)
@@ -161,8 +161,14 @@ class Runner(object):
         recall = np.zeros_like(precision)
         total_res = np.zeros(shape=(c_l, i_l, s_l))
         gt = np.zeros(len(self.loader['val']))
-        for sample_id, (img, label) in enumerate(tqdm(self.loader['val'])):
-            res = self.judge_batch(img, label, conf_thresholds=conf_thresholds,
+        for sample_id, (img, label) in enumerate(
+                tqdm(self.loader['val'],
+                     desc=f'Inference with different thresholds',
+                     dynamic_ncols=True)
+        ):
+            res = self.judge_batch(img,
+                                   label,
+                                   conf_thresholds=conf_thresholds,
                                    iou_thresholds=iou_thresholds)
             total_res[:, :, sample_id] = res
             if 1 in label:

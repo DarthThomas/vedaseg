@@ -27,10 +27,10 @@ def main():
     checkpoint = args.checkpoint
 
     runner = assemble(cfg_fp, checkpoint, True)
-    # runner(ap_ana=True,
-    #        conf_thresholds=np.arange(0.1, 1.0, 0.1),
-    #        iou_thresholds=np.arange(0.1, 1.0, 0.1))
-    runner(ap_ana=np.arange(0.1, 1.0, 0.1))
+    runner(ap_ana=True,
+           conf_thresholds=np.arange(0.1, 1.0, 0.2),
+           iou_thresholds=np.arange(0.1, 1.0, 0.2))
+    # runner(ap_ana=np.arange(0.1, 1.0, 0.1))
 
 
 if __name__ == '__main__':
