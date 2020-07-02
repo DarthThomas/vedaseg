@@ -16,8 +16,7 @@ def parse_args():
                         default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
                                 '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
-                        default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
-                                'vedaseg/model/x_ray/WCE_INIT/epoch_150.pth')
+                        default='/home/yuhaoye/tmp/epoch_75.pth')
     parser.add_argument('--img_dir', help='infer image path',
                         default='/media/yuhaoye/DATA7/datasets/x-ray/'
                                 'jinnan2_round2_train_20190401/'
@@ -46,28 +45,35 @@ def main():
                    'jinnan2_round2_train_20190401'
                    '/restricted_voc/ImageSets/Segmentation/val.txt')  #
     # trainaug.txt
-    img_list = read_imglist(val_set_dir)[105:110]
+    img_list = read_imglist(val_set_dir)
 
+    output_dir = '/media/yuhaoye/DATA7/datasets/x-ray/' \
+                 'jinnan2_round2_train_20190401/' \
+                 'jinnan2_round2_train_20190401/' \
+                 'restricted_voc/val_infer_75/'
+
+    os.makedirs(output_dir, exist_ok=True)
     segmenter = assemble(cfg_fp, checkpoint)
 
     images = []
     for image in img_list:
         images.append(get_image(img_dir + image, order='BGR'))
 
-    predictions = segmenter(image=images, thres=0.4)
+    predictions = segmenter(image=images, thres=0.6)
 
-    for image, prediction in zip(images, predictions):
+    for idx, (image, prediction) in enumerate(zip(images, predictions)):
         get_plot(image, prediction, vis_mask=True, vis_contour=True,
+                 output_dir=(output_dir + img_list[idx]).replace('jpg', 'png'),
                  inverse_color_channel=True, n_class=2, color_name='autumn')
 
-    images = []
-    for image in img_list:
-        images.append(get_image(img_dir + image, order='RGB'))
-
-    for image in images:
-        prediction = segmenter(image=image, thres=0.4)
-        get_plot(image, prediction, vis_mask=True, vis_contour=True,
-                 inverse_color_channel=False, n_class=2, color_name='autumn')
+    # images = []
+    # for image in img_list:
+    #     images.append(get_image(img_dir + image, order='RGB'))
+    #
+    # for image in images:
+    #     prediction = segmenter(image=image, thres=0.4)
+    #     get_plot(image, prediction, vis_mask=True, vis_contour=True,
+    #              inverse_color_channel=False, n_class=2, color_name='autumn')
 
     # for image in img_list:
     #     print(img_dir + image)
