@@ -105,38 +105,35 @@ class Runner(object):
             self.validate_batch(img, label)
 
     def ana_epoch(self, thres, conf):
-        for sample_id, (img, label) in enumerate(tqdm(self.loader['val'])):
-
+        ious_ = np.zeros(len(self.loader['val']))
+        for sample_id, (img, label) in enumerate(tqdm(self.loader['val'],
+                                                      desc=f'Confidence='
+                                                           f'{conf:.1f}',
+                                                      dynamic_ncols=True)):
             if 1 in label:
                 self.ana_gt[sample_id] = 1
 
-            self.metric.reset()
             pred, gt = self.ana_batch(img, label, conf=conf)
 
             _, ious = self.metric.miou()
-            self.metric.reset()
-
             iou = ious[-1]
-
-            #     print(f'iou={iou}, gt={self.ana_gt[sample_id]}')
+            ious_[sample_id] = ious[-1]
             for thres_id, threshold in enumerate(thres):
                 if (1 in pred) and (1 not in gt):
-                    assert (1 not in gt) == (1 not in label)
                     self.ana_pred[thres_id, sample_id] = 1
-                elif iou >= threshold:
+                elif iou > threshold:
                     self.ana_pred[thres_id, sample_id] = 1
 
-        total_p, total_r = [], []
+        total_p, total_r = np.zeros(len(thres)), np.zeros(len(thres))
+        tqdm.write(f'{self.ana_pred[:, :10]}')
 
         for thres_id, threshold in enumerate(thres):
             p, r = self.ana_ap(self.ana_gt, self.ana_pred[thres_id, :])
             tqdm.write(f"Threshold@{threshold:.2f}: "
                        f"{' ' * 4}"
                        f"Precision: {p:.4f},  Recall:{r:.4f}")
-            total_p.append(p)
-            total_r.append(r)
-        total_p = np.array(total_p)
-        total_r = np.array(total_r)
+            total_p[thres_id] = p
+            total_r[thres_id] = r
         tqdm.write(f'Average P:{np.mean(total_p):.3f}, '
                    f'Average R:{np.mean(total_r):.3f}')
 
@@ -311,6 +308,7 @@ class Runner(object):
             # logger.info('Validate, mIoU %.4f, fgIoU %.6f' % (miou, ious[-1]))
 
     def ana_batch(self, img, label, conf=None):
+        self.metric.reset()
         self.model.eval()
         with torch.no_grad():
             if self.gpu:

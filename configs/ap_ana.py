@@ -94,7 +94,7 @@ data = dict(
             num_workers=1,
             shuffle=False,
             drop_last=False,
-            pin_memory=True,
+            pin_memory=False,
         ),
     ),
 )
