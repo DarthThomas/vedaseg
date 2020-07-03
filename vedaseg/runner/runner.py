@@ -182,8 +182,6 @@ class Runner(object):
         return precision, recall
 
     def search_epoch(self, thres):
-        # logger.info('Thres %f, Start validating' % thres)
-
         for img, label in tqdm(self.loader['val'],
                                desc=f'Thres={thres}',
                                dynamic_ncols=True):
