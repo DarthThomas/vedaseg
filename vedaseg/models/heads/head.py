@@ -53,6 +53,7 @@ class Head(nn.Module):
         logger.info('Head init weights')
         init_weights(self.modules())
         if custom_init is not None:
+            logger.info(f'    Head init weights:{custom_init}')
             nn.init.constant_(self.block[-1].weight, 0)
             self.block[-1].bias = nn.Parameter(
                 torch.Tensor(custom_init))  # noqa
