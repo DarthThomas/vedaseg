@@ -53,9 +53,12 @@ class Head(nn.Module):
         logger.info('Head init weights')
         init_weights(self.modules())
         if custom_init is not None:
+            custom_conv = -1
+            if upsample:
+                custom_conv = -2
             logger.info(f'    Head init weights:{custom_init}')
-            nn.init.constant_(self.block[-1].weight, 0)
-            self.block[-1].bias = nn.Parameter(
+            nn.init.constant_(self.block[custom_conv].weight, 0)
+            self.block[custom_conv].bias = nn.Parameter(
                 torch.Tensor(custom_init))  # noqa
 
     def forward(self, x):
