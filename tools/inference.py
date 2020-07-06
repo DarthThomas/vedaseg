@@ -2,6 +2,8 @@ import argparse
 import os
 import sys
 
+from tqdm import tqdm
+
 sys.path.insert(0,
                 os.path.join(os.path.abspath(os.path.dirname(__file__)),
                              '../../vedaseg'))
@@ -43,25 +45,27 @@ def main():
     val_set_dir = ('/media/yuhaoye/DATA7/datasets/x-ray'
                    '/jinnan2_round2_train_20190401/'
                    'jinnan2_round2_train_20190401'
-                   '/restricted_voc/ImageSets/Segmentation/val.txt')  #
+                   '/restricted_voc/ImageSets/Segmentation/trainaug.txt')  #
     # trainaug.txt
     img_list = read_imglist(val_set_dir)
 
     output_dir = '/media/yuhaoye/DATA7/datasets/x-ray/' \
                  'jinnan2_round2_train_20190401/' \
                  'jinnan2_round2_train_20190401/' \
-                 'restricted_voc/val_infer_75/'
+                 'restricted_voc/tain_infer/'
 
     os.makedirs(output_dir, exist_ok=True)
     segmenter = assemble(cfg_fp, checkpoint)
 
     images = []
-    for image in img_list:
+    for image in tqdm(img_list, desc='Fetching images', dynamic_ncols=True):
         images.append(get_image(img_dir + image, order='BGR'))
 
     predictions = segmenter(image=images, thres=0.6)
 
-    for idx, (image, prediction) in enumerate(zip(images, predictions)):
+    for idx, (image, prediction) in enumerate(tqdm(zip(images, predictions),
+                                                   desc='Rendering images',
+                                                   dynamic_ncols=True)):
         get_plot(image, prediction, vis_mask=True, vis_contour=True,
                  output_dir=(output_dir + img_list[idx]).replace('jpg', 'png'),
                  inverse_color_channel=True, n_class=2, color_name='autumn')

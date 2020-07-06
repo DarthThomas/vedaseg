@@ -1,5 +1,6 @@
-import torch.nn as nn
 import logging
+
+import torch.nn as nn
 from torchvision.models.resnet import model_urls
 
 try:
@@ -286,7 +287,8 @@ class ResNet(ResNetCls):
         x4 = self.layer4(x3)  # 32
         feats['c5'] = x4
 
-        #for k, v in feats.items():
+        # for k, v in feats.items():
         #    print(k, v.shape)
+        # assert 1 == 0
 
         return feats
