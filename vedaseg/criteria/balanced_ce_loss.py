@@ -25,26 +25,26 @@ class BalanceCrossEntropyLoss(nn.Module):
         >>> output.backward()
     """
 
-    def __init__(self, negative_ratio=3.0, eps=1e-6, negative_override=0.1):
+    def __init__(self, negative_ratio=3.0, eps=1e-6, negative_override=0.1,
+                 ignore_index=255):
         super(BalanceCrossEntropyLoss, self).__init__()
         self.negative_ratio = negative_ratio
         self.eps = eps
         self.negative_override = negative_override
+        self.ignore_index = ignore_index
 
     def forward(self,
                 pred: torch.Tensor,
                 gt: torch.Tensor,
-                mask: torch.Tensor,
-                ignore_label=255):
+                mask: torch.Tensor):
         """
         Args:
-            ignore_label: label index to ignore
             pred: shape :math:`(N, 1, H, W)`, the prediction of network
             gt: shape :math:`(N, 1, H, W)`, the target
             mask: shape :math:`(N, H, W)`, the mask indicates positive regions
         """
         valid_tensor = torch.ones_like(gt)
-        valid_tensor[gt == ignore_label] = 0
+        valid_tensor[gt == self.ignore_index] = 0
 
         positive = (valid_tensor * gt * mask).byte()
         negative = (valid_tensor * (1 - gt) * mask).byte()
