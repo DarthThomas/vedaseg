@@ -1,3 +1,4 @@
+import os
 import random
 
 import cv2
@@ -40,7 +41,7 @@ class FactorScale:
         self.mode = mode
         self.scale_factor = scale_factor
 
-    def rescale(self, image, mask):
+    def rescale(self, image, mask=None):
         h, w, c = image.shape
 
         if self.scale_factor == 1.0:
@@ -50,13 +51,16 @@ class FactorScale:
         new_w = int(w * self.scale_factor)
 
         torch_image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
-        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_image = F.interpolate(torch_image, size=(new_h, new_w),
                                     mode=self.mode, align_corners=True)
+        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
+
+        if mask is None:
+            return new_image, mask
+
+        torch_mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)
         torch_mask = F.interpolate(torch_mask, size=(new_h, new_w),
                                    mode='nearest')
-
-        new_image = torch_image.squeeze().permute(1, 2, 0).numpy()
         new_mask = torch_mask.squeeze().numpy()
 
         return new_image, new_mask
@@ -159,16 +163,20 @@ class PadIfNeeded:
         target_height = h + max(self.height - h, 0)
         target_width = w + max(self.width - w, 0)
 
-        image_pad_value = np.reshape(np.array(self.image_value, dtype=image.dtype), [1, 1, self.channel])
-        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype), [1, 1])
-
+        image_pad_value = np.reshape(
+            np.array(self.image_value, dtype=image.dtype), [1, 1, self.channel])
         new_image = np.tile(image_pad_value, (target_height, target_width, 1))
-        new_mask = np.tile(mask_pad_value, (target_height, target_width))
-
         new_image[:h, :w, :] = image
+
+        if mask is None:
+            return new_image, mask
+        mask_pad_value = np.reshape(np.array(self.mask_value, dtype=mask.dtype),
+                                    [1, 1])
+        new_mask = np.tile(mask_pad_value, (target_height, target_width))
         new_mask[:h, :w] = mask
 
-        assert np.count_nonzero(mask != self.mask_value) == np.count_nonzero(new_mask != self.mask_value)
+        assert np.count_nonzero(mask != self.mask_value) == np.count_nonzero(
+            new_mask != self.mask_value)
 
         return new_image, new_mask
 
@@ -187,10 +195,50 @@ class HorizontalFlip:
 
 
 @TRANSFORMS.register_module
-class RandomRotate:
-    def __init__(self, p=0.5, degrees=30, mode='bilinear', border_mode='reflect101', image_value=None, mask_value=None):
+class MixupFromBackground:
+    def __init__(self, p=0.5, alphas=[0.3, 0.7],
+                 target_size=None, mode='bilinear',
+                 image_value=None, mask_value=None, bg_dir=None):
         self.p = p
-        self.degrees = (-degrees, degrees) if isinstance(degrees, (int, float)) else degrees
+        self.alphas = (1, alphas) if isinstance(alphas,
+                                                (int, float)) else alphas
+        self.mode = CV2_MODE[mode]
+        self.image_value = image_value
+        self.mask_value = mask_value
+        self.size_scale = SizeScale(target_size, mode='bilinear')
+        self.random_rotate = RandomRotate(degrees=10, image_value=image_value)
+        self.pad_if_needed = PadIfNeeded(target_size, target_size,
+                                         image_value, mask_value)
+        self.bg_list = os.listdir(bg_dir)
+        self.bg_dir = bg_dir
+
+    def __call__(self, image, mask):
+        if random.random() > self.p:
+            return image, mask
+
+        bg_fp = os.path.join(self.bg_dir, random.choice(self.bg_list))
+        bg_img = cv2.imread(bg_fp).astype(np.float32)
+        bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2RGB)
+        bg_img, _ = self.random_rotate(bg_img, None)
+        bg_img, _ = self.size_scale(bg_img, None)
+        bg_img, _ = self.pad_if_needed(bg_img, None)
+
+        alpha = random.uniform(*self.alphas)
+        beta = (1.0 - alpha)
+        print(image.shape)
+        print(bg_img.shape)
+        dst = cv2.addWeighted(image, alpha, bg_img, beta, 0.0)
+
+        return dst, mask
+
+
+@TRANSFORMS.register_module
+class RandomRotate:
+    def __init__(self, p=0.5, degrees=30, mode='bilinear',
+                 border_mode='reflect101', image_value=None, mask_value=None):
+        self.p = p
+        self.degrees = (-degrees, degrees) if isinstance(degrees, (
+        int, float)) else degrees
         self.mode = CV2_MODE[mode]
         self.border_mode = CV2_BORDER_MODE[border_mode]
         self.image_value = image_value
@@ -203,9 +251,14 @@ class RandomRotate:
             angle = random.uniform(*self.degrees)
             matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0)
 
-            image = cv2.warpAffine(image, M=matrix, dsize=(w, h), flags=self.mode, borderMode=self.border_mode,
+            image = cv2.warpAffine(image, M=matrix, dsize=(w, h),
+                                   flags=self.mode, borderMode=self.border_mode,
                                    borderValue=self.image_value)
-            mask = cv2.warpAffine(mask, M=matrix, dsize=(w, h), flags=cv2.INTER_NEAREST, borderMode=self.border_mode,
+            if mask is None:
+                return image, mask
+            mask = cv2.warpAffine(mask, M=matrix, dsize=(w, h),
+                                  flags=cv2.INTER_NEAREST,
+                                  borderMode=self.border_mode,
                                   borderValue=self.mask_value)
 
         return image, mask
