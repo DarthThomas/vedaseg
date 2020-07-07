@@ -35,16 +35,17 @@ class BalanceCrossEntropyLoss(nn.Module):
 
     def forward(self,
                 pred: torch.Tensor,
-                gt: torch.Tensor,
-                mask: torch.Tensor):
+                gt: torch.Tensor):
         """
         Args:
             pred: shape :math:`(N, 1, H, W)`, the prediction of network
             gt: shape :math:`(N, 1, H, W)`, the target
-            mask: shape :math:`(N, H, W)`, the mask indicates positive regions
         """
         valid_tensor = torch.ones_like(gt)
         valid_tensor[gt == self.ignore_index] = 0
+
+        prob = pred.softmax(dim=1)
+        _, mask = torch.max(prob, dim=1)
 
         positive = (valid_tensor * gt * mask).byte()
         negative = (valid_tensor * (1 - gt) * mask).byte()
@@ -55,7 +56,9 @@ class BalanceCrossEntropyLoss(nn.Module):
             negative_count = min(int(negative.float().sum()),
                                  int(positive_count * self.negative_ratio))
 
-        loss = binary_cross_entropy(pred, gt, reduction='none')[:, 0, :, :]
+        loss = binary_cross_entropy(prob[:, 1, :, :],
+                                    gt,
+                                    reduction='none')[:, 0, :, :]
         positive_loss = loss * positive.float()
         negative_loss = loss * negative.float()
         negative_loss, _ = torch.topk(negative_loss.view(-1), negative_count)
