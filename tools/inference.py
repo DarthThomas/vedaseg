@@ -18,7 +18,7 @@ def parse_args():
                         default='/media/yuhaoye/DATA7/temp_for_upload/vedaseg'
                                 '/configs/deeplabv3plus_WCE.py')
     parser.add_argument('--checkpoint', help='model checkpoint file path',
-                        default='/home/yuhaoye/tmp/epoch_135.pth')
+                        default='/home/yuhaoye/tmp/epoch_150.pth')
     parser.add_argument('--img_dir', help='infer image path',
                         default='/media/yuhaoye/DATA7/datasets/x-ray/'
                                 'jinnan2_round2_train_20190401/'
@@ -46,29 +46,46 @@ def main():
                    '/jinnan2_round2_train_20190401/'
                    'jinnan2_round2_train_20190401'
                    '/restricted_voc/ImageSets/Segmentation/trainaug.txt')  #
+
+    normal_set = '/media/yuhaoye/DATA7/datasets/x-ray/' \
+                 'jinnan2_round2_train_20190401/jinnan2_round2_train_20190401/' \
+                 'normal/'
     # trainaug.txt
     img_list = read_imglist(val_set_dir)
 
     output_dir = '/media/yuhaoye/DATA7/datasets/x-ray/' \
                  'jinnan2_round2_train_20190401/' \
                  'jinnan2_round2_train_20190401/' \
-                 'restricted_voc/train_infer_135/'
+                 'restricted_voc/Normal_set_150/'
 
     os.makedirs(output_dir, exist_ok=True)
     segmenter = assemble(cfg_fp, checkpoint)
 
+    # images = []
+    # for image in tqdm(img_list, desc='Fetching images', dynamic_ncols=True):
+    #     images.append(get_image(img_dir + image, order='BGR'))
+
     images = []
-    for image in tqdm(img_list, desc='Fetching images', dynamic_ncols=True):
-        images.append(get_image(img_dir + image, order='BGR'))
+    for image in tqdm(os.listdir(normal_set),
+                      desc='Fetching images',
+                      dynamic_ncols=True):
+        images.append(get_image(normal_set + image, order='BGR'))
+        img_list.append(image)
 
     predictions = segmenter(image=images, thres=0.6)
 
+    tn = 0
     for idx, (image, prediction) in enumerate(tqdm(zip(images, predictions),
                                                    desc='Rendering images',
-                                                   dynamic_ncols=True)):
+                                                   dynamic_ncols=True,
+                                                   total=len(img_list))):
+        if not (1 in prediction):
+            tn += 1
+            continue
         get_plot(image, prediction, vis_mask=True, vis_contour=True,
                  output_dir=(output_dir + img_list[idx]).replace('jpg', 'png'),
                  inverse_color_channel=True, n_class=2, color_name='autumn')
+    print(tn, tn / len(os.listdir(normal_set)))
 
     # images = []
     # for image in img_list:
