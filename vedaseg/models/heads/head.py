@@ -53,9 +53,11 @@ class Head(nn.Module):
         logger.info('Head init weights')
         init_weights(self.modules())
         if custom_init is not None:
-            nn.init.constant_(self.block[-1].weight, 0)
-            self.block[-1].bias = nn.Parameter(
-                torch.Tensor(custom_init))  # noqa
+            l = -1
+            if upsample:
+                l = -2
+            nn.init.constant_(self.block[l].weight, 0)
+            self.block[l].bias = nn.Parameter(torch.Tensor(custom_init))  # noqa
 
     def forward(self, x):
         feat = self.block(x)
