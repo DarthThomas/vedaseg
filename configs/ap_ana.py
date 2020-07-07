@@ -78,7 +78,7 @@ data = dict(
         dataset=dict(
             type=dataset_type,
             root=dataset_root,
-            imglist_name='val.txt',  # 'trainaug.txt',
+            imglist_name='trainaug.txt',  # 'trainaug.txt',shorter_edge_val
             target=3,
         ),
         transforms=[

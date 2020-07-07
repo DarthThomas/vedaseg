@@ -58,13 +58,30 @@ class Runner(object):
             self.ana_pred = np.zeros(shape=(len(conf_thresholds),
                                             len(iou_thresholds),
                                             len(self.loader['val'])))
-            p, r = self.judge_eopch(conf_thresholds=conf_thresholds,
-                                    iou_thresholds=iou_thresholds)
+
+            tps, tns, fps, fns, p, r, tpr, fpr = self.judge_eopch(
+                conf_thresholds=conf_thresholds,
+                iou_thresholds=iou_thresholds
+            )
+
             with np.printoptions(precision=4, suppress=True):
+                print('tp:')
+                print(tps)
+                print('tn:')
+                print(tns)
+                print('fp:')
+                print(fps)
+                print('fn:')
+                print(fns)
+
                 print('precision:')
                 print(p)
                 print('recall:')
                 print(r)
+                print('true positive rate:')
+                print(tpr)
+                print('false positive rate:')
+                print(fpr)
         # if ap_ana is not None:
         #     total_samples = len(self.loader['val'])
         #     total_thres = len(ap_ana)
@@ -127,7 +144,7 @@ class Runner(object):
         total_p, total_r = np.zeros_like(thres), np.zeros_like(thres)
 
         for thres_id, threshold in enumerate(thres):
-            p, r = self.ana_ap(self.ana_gt, self.ana_pred[thres_id, :])
+            p, r = self.ana_pr(self.ana_gt, self.ana_pred[thres_id, :])
             tqdm.write(f"Threshold@{threshold:.2f}: "
                        f"{' ' * 4}"
                        f"Precision: {p:.4f},  Recall:{r:.4f}")
@@ -137,7 +154,7 @@ class Runner(object):
                    f'Average R:{np.mean(total_r):.3f}')
 
     @staticmethod
-    def ana_ap(gt, pred):
+    def ana_tpfn(gt, pred):
         tp, tn, fp, fn = 0, 0, 0, 0
         assert len(gt) == len(pred)
         for gt_, pred_ in zip(gt, pred):
@@ -149,9 +166,19 @@ class Runner(object):
                 fn += 1
             else:
                 fp += 1
+        return tp, tn, fp, fn
+
+    @staticmethod
+    def ana_pr(tp, tn, fp, fn):
         precision = tp / (tp + fp + sys.float_info.min)
         recall = tp / (tp + fn + sys.float_info.min)
         return precision, recall
+
+    @staticmethod
+    def ana_roc(tp, tn, fp, fn):
+        tp_rate = tp / (tp + fn + sys.float_info.min)
+        fp_rate = fp / (fp + tn + sys.float_info.min)
+        return tp_rate, fp_rate
 
     def judge_eopch(self, conf_thresholds=None, iou_thresholds=None):
         c_l, i_l, s_l = len(conf_thresholds), \
@@ -159,6 +186,13 @@ class Runner(object):
                         len(self.loader['val'])
         precision = np.zeros(shape=(c_l, i_l))
         recall = np.zeros_like(precision)
+        tp_rates = np.zeros_like(precision)
+        fp_rates = np.zeros_like(precision)
+        tps = np.zeros_like(precision)
+        tns = np.zeros_like(precision)
+        fps = np.zeros_like(precision)
+        fns = np.zeros_like(precision)
+
         total_res = np.zeros(shape=(c_l, i_l, s_l))
         gt = np.zeros(len(self.loader['val']))
         for sample_id, (img, label) in enumerate(
@@ -176,10 +210,19 @@ class Runner(object):
 
         for conf_idx, conf_thres in enumerate(conf_thresholds):
             for iou_idx, iou_thres in enumerate(iou_thresholds):
-                p, r = self.ana_ap(gt, total_res[conf_idx, iou_idx, :])
+                tp, tn, fp, fn = self.ana_tpfn(gt,
+                                               total_res[conf_idx, iou_idx, :])
+                p, r = self.ana_pr(tp, tn, fp, fn)
+                tpr, fpr = self.ana_roc(tp, tn, fp, fn)
                 precision[conf_idx, iou_idx] = p
                 recall[conf_idx, iou_idx] = r
-        return precision, recall
+                tp_rates[conf_idx, iou_idx] = tpr
+                fp_rates[conf_idx, iou_idx] = fpr
+                tps[conf_idx, iou_idx] = tp
+                tns[conf_idx, iou_idx] = tn
+                fps[conf_idx, iou_idx] = fp
+                fns[conf_idx, iou_idx] = fn
+        return tps, tns, fps, fns, precision, recall, tp_rates, fp_rates
 
     def search_epoch(self, thres):
         for img, label in tqdm(self.loader['val'],
