@@ -404,6 +404,7 @@ class Runner(object):
             prob = conf_map[:, 1, :, :]
             pred_label = torch.zeros_like(prob).long()
             pred_label[prob > conf_thres] = 1
+            pred_label[label == 255] = 0
 
         if (1 not in label) and (1 in pred_label):
             return 1
