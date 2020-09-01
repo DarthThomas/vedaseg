@@ -49,15 +49,15 @@ model = dict(
             replace_stride_with_dilation=[False, False, True],
             multi_grid=[1, 2, 4],
         ),
-        enhance=dict(
-            type='ASPP',
-            from_layer='c5',
-            to_layer='enhance',
-            in_channels=2048,
-            out_channels=256,
-            atrous_rates=[6, 12, 18],
-            dropout=0.1,
-        ),
+        # enhance=dict(
+        #     type='ASPP',
+        #     from_layer='c5',
+        #     to_layer='enhance',
+        #     in_channels=2048,
+        #     out_channels=256,
+        #     atrous_rates=[6, 12, 18],
+        #     dropout=0.1,
+        # ),
     ),
     # model/decoder
     decoder=dict(

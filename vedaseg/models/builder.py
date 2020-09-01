@@ -10,7 +10,7 @@ def build_model(cfg, default_args=None):
     encoder = build_encoder(cfg.get('encoder'))
     model = nn.Sequential(encoder)
 
-    return model
+    # return model
 
     if cfg.get('decoder'):
         middle = build_decoder(cfg.get('decoder'))

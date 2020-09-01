@@ -96,10 +96,23 @@ class ASPP(nn.Module):
         feats_ = feats.copy()
         x = feats_[self.from_layer]
         res = []
-        for conv in self.convs:
+        for idx, conv in enumerate(self.convs):
+            torch.cuda.synchronize()
+            b = time.time()
             res.append(conv(x))
+            torch.cuda.synchronize()
+            print(f"{' ' * 16} conv#{idx} in ASPP cost: {time.time() - b}")
+        b = time.time()
+        torch.cuda.synchronize()
         res = torch.cat(res, dim=1)
+        torch.cuda.synchronize()
+        print(f"{' ' * 16} concat in ASPP cost: {time.time() - b}")
+
+        b = time.time()
+        torch.cuda.synchronize()
         res = self.project(res)
+        torch.cuda.synchronize()
+        print(f"{' ' * 16} final conv in ASPP cost: {time.time() - b}")
         if self.with_dropout:
             res = self.dropout(res)
         feats_[self.to_layer] = res

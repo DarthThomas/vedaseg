@@ -58,5 +58,6 @@ class Head(nn.Module):
         torch.cuda.synchronize()
         feat = self.block(x)
         torch.cuda.synchronize()
-        print(f"{' ' * 12}HEAD infer cost: {time.time() - a}")
+        print(f"{' ' * 12}HEAD({len(self.block)} layer(s)) infer cost:"
+              f" {time.time() - a}")
         return feat

@@ -15,7 +15,7 @@ def parse_args():
         description='Use trained semantic segmenter')
     base_dir = '/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
     parser.add_argument('--config', help='train config file path',
-                        default=base_dir + 'configs/resnet18-orig-detail')
+                        default=base_dir + 'configs/d3p_resnet50_481_NoAspp.py')
     parser.add_argument('--checkpoint', help='train config file path',
                         default=None)
     # default=base_dir + 'vedaseg/model/epoch_50.pth')
@@ -97,7 +97,7 @@ def main():
     # pr = cProfile.Profile()
 
     # pr.enable()
-    for _ in trange(110,
+    for _ in trange(10,
                     dynamic_ncols=True,
                     desc=f'testing single/batch inference with '
                          f'{len(images)} images',
