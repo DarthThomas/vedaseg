@@ -98,7 +98,7 @@ def main():
     # pr = cProfile.Profile()
 
     # pr.enable()
-    for _ in trange(10,
+    for _ in trange(101,
                     dynamic_ncols=True,
                     desc=f'testing single/batch inference with '
                          f'{len(images)} images',

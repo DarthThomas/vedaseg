@@ -10,7 +10,7 @@ logger = dict(
 )
 
 # 2. data
-net_size = 481
+net_size = 321
 
 img_norm_cfg = dict(mean=(123.675, 116.280, 103.530),
                     std=(58.395, 57.120, 57.375))
@@ -45,18 +45,16 @@ model = dict(
     encoder=dict(
         backbone=dict(
             type='ResNet',
-            arch='resnet_18_btlnek',
-            pretrain=False,
+            arch='resnet50',
             replace_stride_with_dilation=[False, False, True],
-            multi_grid=[1, 4],
+            multi_grid=[1, 2, 4],
         ),
         enhance=dict(
-            type='ASPP',
+            type='ReduceChannel',
             from_layer='c5',
             to_layer='enhance',
             in_channels=2048,
             out_channels=256,
-            atrous_rates=[6, 12, 18],
             dropout=0.1,
         ),
     ),

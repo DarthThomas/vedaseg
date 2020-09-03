@@ -51,7 +51,7 @@ class BasicBlock(nn.Module):
         self.bn1 = norm_layer(planes)
         self.relu1 = act_layer(planes)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = act_layer(planes)
+        self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.relu2 = act_layer(planes)
         self.stride = stride
@@ -137,7 +137,7 @@ MODEL_CFGS = {
         'layer': [2, 2, 2, 2],
         'weights_url': model_urls['resnet18'],
     },
-    'resnet_bottleneck2222': {
+    'resnet_18_btlnek': {
         'block': Bottleneck,
         'layer': [2, 2, 2, 2],
         'weights_url': model_urls['resnet18'],
