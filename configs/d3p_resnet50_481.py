@@ -30,7 +30,7 @@ data = dict(
         ],
         loader_setting=dict(
             batch_size=16,
-            num_workers=2,
+            num_workers=0,
             shuffle=False,
             drop_last=False,
             pin_memory=False

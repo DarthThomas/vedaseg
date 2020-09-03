@@ -341,8 +341,8 @@ class ResNet(ResNetCls):
         torch.cuda.synchronize()
         print(f"{' ' * 12}BACKBONE infer cost: {time.time() - a}")
 
-        for k, v in feats.items():
-            print(k, v.shape)
+        # for k, v in feats.items():
+        #     print(k, v.shape)
         # print(self)
 
         return feats

@@ -40,8 +40,14 @@ class ASPPPooling(nn.Sequential):
             norm_layer(out_channels), act_layer(out_channels))
 
     def forward(self, x):
+        # print(f"ASPP pooling got input {x.shape[:]}, the size is {x.shape[-2:]}")
         size = x.shape[-2:]
         x = super(ASPPPooling, self).forward(x)
+        # print(f"ASPP pooling got size {x.shape[:]} after pooling")
+        aaa = F.interpolate(x, size=size, mode='bilinear', align_corners=True)
+        # print(f"ASPP pooling returning result of size {aaa.shape[:]}")
+        # print(f"ASPP pooling returning result sample\n {aaa[8, 128, :7,:7]}")
+        # print(f"ASPP pooling returning orig sample\n {x[8, 128, :, :]}")
         return F.interpolate(x, size=size, mode='bilinear', align_corners=True)
 
 

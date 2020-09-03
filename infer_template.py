@@ -15,7 +15,7 @@ def parse_args():
         description='Use trained semantic segmenter')
     base_dir = '/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
     parser.add_argument('--config', help='train config file path',
-                        default=base_dir + 'configs/d3p_resnet50_481_NoAspp.py')
+                        default=base_dir + 'configs/d3p_resnet18BoNe_321_NoAspp.py')
     parser.add_argument('--checkpoint', help='train config file path',
                         default=None)
     # default=base_dir + 'vedaseg/model/epoch_50.pth')
@@ -83,6 +83,7 @@ def image_overlay(image, mask, color):
 def main():
     args = parse_args()
     cfg_fp = args.config
+    print(cfg_fp)
     checkpoint = args.checkpoint
     img_dir = args.img_dir
 

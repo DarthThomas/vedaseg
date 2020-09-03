@@ -45,9 +45,10 @@ model = dict(
     encoder=dict(
         backbone=dict(
             type='ResNet',
-            arch='resnet50',
+            arch='resnet_bottleneck2222',
+            pretrain=False,
             replace_stride_with_dilation=[False, False, True],
-            multi_grid=[1, 2, 4],
+            multi_grid=[1, 4],
         ),
         enhance=dict(
             type='ReduceChannel',
