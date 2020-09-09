@@ -1,7 +1,5 @@
 import logging
-import time
 
-import torch
 import torch.nn as nn
 from torchvision.models.resnet import model_urls
 
@@ -301,45 +299,45 @@ class ResNet(ResNetCls):
 
     def forward(self, x):
         feats = {}
-        a = time.time()
-        torch.cuda.synchronize()
+        # a = time.time()
+        # torch.cuda.synchronize()
         x0 = self.conv1(x)
         x0 = self.bn1(x0)
         x0 = self.relu1(x0)  # 2
         feats['c1'] = x0
 
         x1 = self.maxpool(x0)
-        a1 = time.time()
-        torch.cuda.synchronize()
+        # a1 = time.time()
+        # torch.cuda.synchronize()
         x1 = self.layer1(x1)  # 4
-        torch.cuda.synchronize()
-        print(f"{' ' * 16}Stage 1 cost: {time.time() - a1}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16}Stage 1 cost: {time.time() - a1}")
         feats['c2'] = x1
 
-        a1 = time.time()
-        torch.cuda.synchronize()
+        # a1 = time.time()
+        # torch.cuda.synchronize()
         x2 = self.layer2(x1)  # 8
-        torch.cuda.synchronize()
-        print(f"{' ' * 16}Stage 2 cost: {time.time() - a1}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16}Stage 2 cost: {time.time() - a1}")
 
         feats['c3'] = x2
-        a1 = time.time()
-        torch.cuda.synchronize()
+        # a1 = time.time()
+        # torch.cuda.synchronize()
         x3 = self.layer3(x2)  # 16
-        torch.cuda.synchronize()
-        print(f"{' ' * 16}Stage 3 cost: {time.time() - a1}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16}Stage 3 cost: {time.time() - a1}")
 
         feats['c4'] = x3
-        a1 = time.time()
-        torch.cuda.synchronize()
+        # a1 = time.time()
+        # torch.cuda.synchronize()
         x4 = self.layer4(x3)  # 32
-        torch.cuda.synchronize()
-        print(f"{' ' * 16}Stage 4 cost: {time.time() - a1}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16}Stage 4 cost: {time.time() - a1}")
 
         feats['c5'] = x4
 
-        torch.cuda.synchronize()
-        print(f"{' ' * 12}BACKBONE infer cost: {time.time() - a}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 12}BACKBONE infer cost: {time.time() - a}")
 
         # for k, v in feats.items():
         #     print(k, v.shape)

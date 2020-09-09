@@ -15,7 +15,7 @@ def parse_args():
         description='Use trained semantic segmenter')
     base_dir = '/media/yuhaoye/DATA7/temp_for_upload/vedaseg/'
     parser.add_argument('--config', help='train config file path',
-                        default=base_dir + 'configs/d3p_resnet18BoNe_321_NoAspp.py')
+                        default=base_dir + 'configs/d3p_resnet50_481.py')
     parser.add_argument('--checkpoint', help='train config file path',
                         default=None)
     # default=base_dir + 'vedaseg/model/epoch_50.pth')
@@ -116,6 +116,19 @@ def main():
         torch.cuda.synchronize()
         # batch_start = time.time()
         prediction = runner(image=images)
+        # model = getattr(runner, 'model').cuda().eval()
+        # backbone = model._modules['0']._modules['0']
+        # enhance = model._modules['0']._modules['1']
+        # head = model._modules['2'].cuda()
+        # a = torch.rand([16, 304, 481, 481], dtype=torch.float32).cuda()
+
+        # b = model(a)
+        # print(head)
+        # print(model._modules['0'])
+        # print(model._modules['1'])
+        # print(model._modules['2'])
+
+        break
         torch.cuda.synchronize()
         # batch_end = time.time()
         # b.append(batch_end - batch_start)

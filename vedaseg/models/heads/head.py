@@ -1,7 +1,5 @@
 import logging
-import time
 
-import torch
 import torch.nn as nn
 
 from .registry import HEADS
@@ -54,10 +52,12 @@ class Head(nn.Module):
         init_weights(self.modules())
 
     def forward(self, x):
-        a = time.time()
-        torch.cuda.synchronize()
+        # print(x.shape)
+        # a = time.time()
+        # torch.cuda.synchronize()
         feat = self.block(x)
-        torch.cuda.synchronize()
-        print(f"{' ' * 12}HEAD({len(self.block)} layer(s)) infer cost:"
-              f" {time.time() - a}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 12}HEAD({len(self.block)} layer(s)) infer cost:"
+        #       f" {time.time() - a}")
+        # print(feat.shape)
         return feat

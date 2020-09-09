@@ -22,7 +22,7 @@ def build_model(cfg, default_args=None):
     head = build_head(cfg['head'])
 
     model = nn.Sequential(encoder, middle, head)
-    pytorch_total_params = sum(p.numel() for p in model.parameters())
-    print(pytorch_total_params)
+    # pytorch_total_params = sum(p.numel() for p in model.parameters())
+    # print(pytorch_total_params)
 
     return model

@@ -1,7 +1,6 @@
 # modify from https://github.com/pytorch/vision/tree/master/torchvision/models/segmentation/deeplabv3.py  # noqa
 
 import logging
-import time
 from functools import partial
 
 import torch
@@ -44,7 +43,7 @@ class ASPPPooling(nn.Sequential):
         size = x.shape[-2:]
         x = super(ASPPPooling, self).forward(x)
         # print(f"ASPP pooling got size {x.shape[:]} after pooling")
-        aaa = F.interpolate(x, size=size, mode='bilinear', align_corners=True)
+        # aaa = F.interpolate(x, size=size, mode='bilinear', align_corners=True)
         # print(f"ASPP pooling returning result of size {aaa.shape[:]}")
         # print(f"ASPP pooling returning result sample\n {aaa[8, 128, :7,:7]}")
         # print(f"ASPP pooling returning orig sample\n {x[8, 128, :, :]}")
@@ -96,33 +95,35 @@ class ASPP(nn.Module):
 
     def forward(self, feats):
 
-        a = time.time()
-        torch.cuda.synchronize()
+        # a = time.time()
+        # torch.cuda.synchronize()
 
         feats_ = feats.copy()
         x = feats_[self.from_layer]
         res = []
         for idx, conv in enumerate(self.convs):
-            torch.cuda.synchronize()
-            b = time.time()
+            # torch.cuda.synchronize()
+            # b = time.time()
             res.append(conv(x))
-            torch.cuda.synchronize()
-            print(f"{' ' * 16} conv#{idx} in ASPP cost: {time.time() - b}")
-        b = time.time()
-        torch.cuda.synchronize()
+            # torch.cuda.synchronize()
+            # print(f"{' ' * 16} conv#{idx} in ASPP cost: {time.time() - b}")
+        # b = time.time()
+        # torch.cuda.synchronize()
         res = torch.cat(res, dim=1)
-        torch.cuda.synchronize()
-        print(f"{' ' * 16} concat in ASPP cost: {time.time() - b}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16} concat in ASPP cost: {time.time() - b}")
 
-        b = time.time()
-        torch.cuda.synchronize()
+        # b = time.time()
+        # torch.cuda.synchronize()
         res = self.project(res)
-        torch.cuda.synchronize()
-        print(f"{' ' * 16} final conv in ASPP cost: {time.time() - b}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 16} final conv in ASPP cost: {time.time() - b}")
         if self.with_dropout:
             res = self.dropout(res)
         feats_[self.to_layer] = res
 
-        torch.cuda.synchronize()
-        print(f"{' ' * 12}ASPP infer cost: {time.time() - a}")
+        # torch.cuda.synchronize()
+        # print(f"{' ' * 12}ASPP infer cost: {time.time() - a}")
+        # for k, v in feats_.items():
+        #     print(k, v.shape)
         return feats_
