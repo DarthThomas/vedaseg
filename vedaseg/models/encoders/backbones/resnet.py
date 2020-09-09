@@ -126,7 +126,12 @@ MODEL_CFGS = {
         'block': BasicBlock,
         'layer': [2, 2, 2, 2],
         'weights_url': model_urls['resnet18'],
-    }
+    },
+    'resnet_18_btlnek': {
+        'block': Bottleneck,
+        'layer': [2, 2, 2, 2],
+        'weights_url': model_urls['resnet18'],
+    },
 }
 
 
