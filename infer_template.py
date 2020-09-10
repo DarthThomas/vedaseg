@@ -19,7 +19,8 @@ def parse_args():
 
 def get_contours(image, mask, color):
     contour_img = image.copy()
-    res = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    res = cv2.findContours(mask.astype(np.uint8), cv2.RETR_TREE,
+                           cv2.CHAIN_APPROX_SIMPLE)
     contours = res[1] if len(res) == 3 else res[0]
     cv2.drawContours(contour_img, contours, -1, color, 3)
     return contour_img
@@ -76,7 +77,8 @@ def main():
     image = get_image(img_dir)
     runner = assemble(cfg_fp, checkpoint)
 
-    prediction = runner(image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    # prediction = runner(image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    prediction = runner(image=image)
     get_plot(image, prediction, vis_mask=True, vis_contour=True)
 
 

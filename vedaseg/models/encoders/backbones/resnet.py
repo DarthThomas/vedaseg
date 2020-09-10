@@ -1,5 +1,6 @@
-import torch.nn as nn
 import logging
+
+import torch.nn as nn
 from torchvision.models.resnet import model_urls
 
 try:
@@ -126,7 +127,12 @@ MODEL_CFGS = {
         'block': BasicBlock,
         'layer': [2, 2, 2, 2],
         'weights_url': model_urls['resnet18'],
-    }
+    },
+    'resnet_18_btlnek': {
+        'block': Bottleneck,
+        'layer': [2, 2, 2, 2],
+        'weights_url': model_urls['resnet18'],
+    },
 }
 
 
