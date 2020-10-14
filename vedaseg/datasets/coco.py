@@ -15,7 +15,7 @@ logger = logging.getLogger()
 @DATASETS.register_module
 class CocoDataset(BaseDataset):
     def __init__(self, root, ann_file, img_prefix='', transform=None,
-                 multi_label=False):
+                 multi_label=False, abs_ann_path=False):
         super().__init__()
         self.multi_label = multi_label
         self.root = root
@@ -25,8 +25,12 @@ class CocoDataset(BaseDataset):
         if self.root is not None:
             self.img_prefix = os.path.join(self.root, self.img_prefix)
 
-        self.data = json.load(
-            open(os.path.join(self.root, 'annotations', self.ann_file), 'r'))
+        if abs_ann_path:
+            self.data = json.load(open(self.ann_file, 'r'))
+        else:
+            self.data = json.load(open(os.path.join(self.root,
+                                                    'annotations',
+                                                    self.ann_file), 'r'))
 
         self.load_annotations()
         logger.debug('Total of images is {}'.format(len(self.data_infos)))
