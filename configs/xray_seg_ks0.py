@@ -126,7 +126,7 @@ test = dict(
             type=dataset_type,
             root=dataset_root,
             ann_file='/DATA/home/tianhewang/DataSets/'
-                     'KS_X-ray/ks_10/ks_10_test.json',
+                     'KS_X-ray/ks_0/ks_0_test.json',
             img_prefix='',
             multi_label=multi_label,
         ),
@@ -160,7 +160,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_10/ks_10_train.json',
+                         'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
@@ -195,7 +195,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_10/ks_10_val.json',
+                         'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
