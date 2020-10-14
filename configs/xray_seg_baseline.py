@@ -98,7 +98,7 @@ inference = dict(
 )
 
 # 2. configuration for train/test
-root_workdir = 'workdir'
+root_workdir = '/DATA/home/tianhewang/work_spaces/project_x-ray'
 dataset_type = 'XrayDataset'
 dataset_root = ''
 
@@ -115,7 +115,8 @@ common = dict(
     metrics=[
         dict(type='MultiLabelIoU', num_classes=nclasses),
         dict(type='MultiLabelMIoU', num_classes=nclasses),
-    ]
+    ], 
+    dist_params=dict(backend='nccl'),
 )
 
 ## 2.1 configuration for test
