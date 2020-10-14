@@ -30,7 +30,7 @@ class Common:
 
         # set distribute setting
         if self.distribute and self.use_gpu:
-            init_dist_pytorch(**cfg.dist_params)
+            init_dist_pytorch(**cfg.get('dist_params', None))
 
         self.rank, self.world_size = get_dist_info()
 
