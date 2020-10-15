@@ -146,8 +146,8 @@ class MultiLabelIoU(MultiLabelConfusionMatrix):
     def accumulate(self):
         ious = self.cfsmtx.diagonal(axis1=1, axis2=2) / (
                 self.cfsmtx.sum(axis=1) + self.cfsmtx.sum(axis=2) -
-                self.cfsmtx.diagonal(axis1=1, axis2=2) + np.finfo(
-            np.float32).eps)
+                self.cfsmtx.diagonal(axis1=1, axis2=2) +
+                np.finfo(np.float32).eps)
 
         accumulate_state = {
             'IoUs': ious[:, 1]
