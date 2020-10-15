@@ -1,6 +1,7 @@
 import logging
 
 import cv2
+import torch
 import numpy as np
 
 from vedaseg.datasets.coco import CocoDataset
@@ -32,7 +33,12 @@ class XrayDataset(CocoDataset):
         masks = self.generate_mask(img.shape, ann_info)
         image, masks = self.process(img, masks)
         if self.as_classification:
-            raise NotImplementedError('Not finished yet')
+            clas_gt = torch.zeros((masks.shape[0], 1, 1))
+            for clas_ind in range(masks.shape[0]):
+                current = masks[clas_ind, ...].reshape(-1)
+                if 1 in current:
+                    clas_gt[clas_ind, 0, 0] = 1
+            return image, clas_gt.long()
         else:
             return image, masks.long()
 
