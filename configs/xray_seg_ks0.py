@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='3',
+    gpu_id='1, 3',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -205,7 +205,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=8,
+                samples_per_gpu=16,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
@@ -215,7 +215,7 @@ train = dict(
     ),
     resume=None,
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
-    optimizer=dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001),
+    optimizer=dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
     trainval_ratio=1,
