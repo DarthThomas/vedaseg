@@ -4,8 +4,8 @@ import cv2
 nclasses = 2
 ignore_label = 255
 image_pad_value = (255, 255, 255)
-size_h = 673
-size_w = 1153
+size_h = 1153
+size_w = 1345
 img_norm_cfg = dict(mean=(0.485, 0.456, 0.406),
                     std=(0.229, 0.224, 0.225),
                     max_pixel_value=255.0)
@@ -178,7 +178,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=4,
+                samples_per_gpu=2,
                 workers_per_gpu=2,
                 shuffle=True,
                 drop_last=True,
@@ -200,7 +200,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=16,
+                samples_per_gpu=8,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
