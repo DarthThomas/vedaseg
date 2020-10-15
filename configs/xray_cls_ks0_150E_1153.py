@@ -87,11 +87,9 @@ inference = dict(
             out_channels=nclasses,
             norm_cfg=norm_cfg,
             num_convs=2,
-            upsample=dict(
-                type='Upsample',
-                size=(size_h, size_w),
-                mode='bilinear',
-                align_corners=True,
+            global_pool_cfg=dict(
+                type='AdaptiveMaxPool2d',
+                output_size=(1, 1),
             ),
         )
     )
@@ -129,6 +127,7 @@ test = dict(
                      'KS_X-ray/ks_0/ks_0_test.json',
             img_prefix='',
             multi_label=multi_label,
+            as_classification=True,
         ),
         transforms=inference['transforms'],
         sampler=dict(
@@ -163,6 +162,7 @@ train = dict(
                          'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
+                as_classification=True,
             ),
             transforms=[
                 dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -198,6 +198,7 @@ train = dict(
                          'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
+                as_classification=True,
             ),
             transforms=inference['transforms'],
             sampler=dict(
