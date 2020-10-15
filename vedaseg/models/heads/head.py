@@ -46,7 +46,10 @@ class Head(nn.Module):
             global_pool_layer = build_torch_nn(global_pool_cfg)
             layers.append(global_pool_layer)
 
-        layers.append(nn.Conv2d(in_channels, out_channels, 1))
+        if num_convs > 0:
+            layers.append(nn.Conv2d(inter_channels, out_channels, 1))
+        else:
+            layers.append(nn.Conv2d(in_channels, out_channels, 1))
 
         if global_pool_cfg is None and upsample:
             upsample_layer = build_module(upsample)
