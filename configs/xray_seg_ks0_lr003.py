@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='4, 5',
+    gpu_id='2, 5',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -126,7 +126,7 @@ test = dict(
             type=dataset_type,
             root=dataset_root,
             ann_file='/DATA/home/tianhewang/DataSets/'
-                     'KS_X-ray/ks_10/ks_10_test.json',
+                     'KS_X-ray/ks_0/ks_0_test.json',
             img_prefix='',
             multi_label=multi_label,
         ),
@@ -160,7 +160,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_10/ks_10_train.json',
+                         'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
@@ -195,7 +195,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_10/ks_10_val.json',
+                         'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
@@ -205,7 +205,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=8,
+                samples_per_gpu=16,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
