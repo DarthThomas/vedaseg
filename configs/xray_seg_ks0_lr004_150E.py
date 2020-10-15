@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='0, 3',
+    gpu_id='0, 2',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -151,7 +151,7 @@ test = dict(
 )
 
 ## 2.2 configuration for train
-max_epochs = 500
+max_epochs = 150
 
 train = dict(
     data=dict(
@@ -160,16 +160,21 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_overfit/ks_overfit_4.json',
+                         'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
             transforms=[
                 dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
                      interpolation=cv2.INTER_LINEAR),
+                dict(type='Rotate', limit=15, interpolation=cv2.INTER_LINEAR,
+                     border_mode=cv2.BORDER_CONSTANT,
+                     value=image_pad_value, mask_value=ignore_label, p=0.5
+                     ),
                 dict(type='PadIfNeeded', min_height=size_h, min_width=size_w,
                      value=image_pad_value, mask_value=ignore_label),
                 # dict(type='GaussianBlur', blur_limit=7, p=0.5),
+                dict(type='HorizontalFlip', p=0.5),
                 dict(type='Normalize', **img_norm_cfg),
                 dict(type='ToTensor'),
             ],
@@ -178,7 +183,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=2,
+                samples_per_gpu=4,
                 workers_per_gpu=2,
                 shuffle=True,
                 drop_last=True,
@@ -190,7 +195,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_overfit/ks_overfit_4.json',
+                         'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
             ),
