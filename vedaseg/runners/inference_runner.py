@@ -6,7 +6,7 @@ from .base import Common
 
 
 class InferenceRunner(Common):
-    def __init__(self, inference_cfg, base_cfg=None):
+    def __init__(self, inference_cfg, base_cfg=None, get_map=False):
         inference_cfg = inference_cfg.copy()
         base_cfg = {} if base_cfg is None else base_cfg.copy()
 
@@ -21,6 +21,7 @@ class InferenceRunner(Common):
         # build model
         self.model = self._build_model(inference_cfg['model'])
         self.model.eval()
+        self.getmap = get_map
 
     def load_checkpoint(self, filename, map_location='default', strict=True):
         self.logger.info('Load checkpoint from {}'.format(filename))
@@ -56,6 +57,8 @@ class InferenceRunner(Common):
     def compute(self, output):
         if self.multi_label:
             output = output.sigmoid()
+            if self.getmap:
+                return output
             output = torch.where(output >= 0.5,
                                  torch.full_like(output, 1),
                                  torch.full_like(output, 0)).long()
