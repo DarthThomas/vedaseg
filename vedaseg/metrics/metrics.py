@@ -1,4 +1,5 @@
 import numpy as np
+from volkscv.metrics.classification.average_precision_score import APscore, mAPscore
 
 from .base import BaseMetric
 from .registry import METRICS
