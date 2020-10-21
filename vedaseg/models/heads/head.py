@@ -26,7 +26,8 @@ class Head(nn.Module):
                  num_convs=0,
                  upsample=None,
                  dropouts=None,
-                 global_pool_cfg=None):
+                 global_pool_cfg=None,
+                 late_global_pool=False):
         super().__init__()
 
         layers = []
@@ -41,7 +42,7 @@ class Head(nn.Module):
                                       num_convs=num_convs,
                                       dropouts=dropouts))
 
-        if global_pool_cfg:
+        if global_pool_cfg and not late_global_pool:
             logger.info('Head siwtched to classification mode')
             global_pool_layer = build_torch_nn(global_pool_cfg)
             layers.append(global_pool_layer)
@@ -50,6 +51,11 @@ class Head(nn.Module):
             layers.append(nn.Conv2d(inter_channels, out_channels, 1))
         else:
             layers.append(nn.Conv2d(in_channels, out_channels, 1))
+
+        if global_pool_cfg and late_global_pool:
+            logger.info('Head siwtched to classification mode - late pooling')
+            global_pool_layer = build_torch_nn(global_pool_cfg)
+            layers.append(global_pool_layer)
 
         if global_pool_cfg is None and upsample:
             upsample_layer = build_module(upsample)
