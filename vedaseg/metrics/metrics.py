@@ -41,6 +41,7 @@ class ConfusionMatrix(BaseMetric):
         self.cfsmtx = np.zeros((self.num_classes,) * 2)
 
     def compute(self, pred, target):
+        pred = np.where(pred >= 0.5, 1, 0)
         mask = (target >= 0) & (target < self.num_classes)
 
         self.current_state = np.bincount(
@@ -82,6 +83,7 @@ class MultiLabelConfusionMatrix(BaseMetric):
         self.cfsmtx = np.zeros((self.num_classes, self.binary, self.binary))
 
     def compute(self, pred, target):
+        pred = np.where(pred >= 0.5, 1, 0)
         mask = (target >= 0) & (target < self.binary)
         for i in range(self.num_classes):
             pred_index_sub = pred[:, i, :, :]
