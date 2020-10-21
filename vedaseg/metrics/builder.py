@@ -9,7 +9,7 @@ def build_metrics(cfg):
     mtcs = []
     for icfg in cfg:
         if icfg['type'] in classification.__all__:
-            mtc = build_from_cfg(icfg, classification, 'module')
+            mtc = build_from_cfg(icfg, classification, None,'module')
         else:
             mtc = build_from_cfg(icfg, METRICS)
         mtcs.append(mtc)
