@@ -1,4 +1,6 @@
 import numpy as np
+from sklearn.metrics import (average_precision_score, roc_auc_score,
+                             accuracy_score)
 
 from .base import BaseMetric
 from .registry import METRICS
@@ -99,6 +101,138 @@ class MultiLabelConfusionMatrix(BaseMetric):
             'confusion matrix': self.cfsmtx
         }
         return accumulate_state
+
+
+class SegAsCLasBase(BaseMetric):
+    def __init__(self, num_classes):
+        self.num_classes = num_classes
+        super().__init__()
+        self.pds = None
+        self.gts = None
+        self.current_pd = None
+        self.current_gt = None
+
+    def reset(self):
+        self.pds = None
+        self.gts = None
+        self.current_pd = None
+        self.current_gt = None
+
+    def compute(self, pred, target):
+        assert pred.shape == target.shape
+        assert len(pred.shape) == 4, f"got unsupported map shape {pred.shape}"
+        n, c, h, w = pred.shape
+
+        self.current_pd = np.zeros((n, c))
+        self.current_gt = np.zeros((n, c))
+
+        for n_i in range(n):
+            for c_i in range(c):
+                pred_l = pred[n_i, c_i, :, :].reshape(-1)
+                target_l = target[n_i, c_i, :, :].reshape(-1)
+                pred_l[target_l == 255] = 0
+                self.current_pd[n_i, c_i] = max(pred_l)
+                if 1 in target_l:
+                    self.current_gt[n_i, c_i] = 1
+
+        return self.current_pd, self.current_gt
+
+    def update(self, n=1):
+        if self.pds is None or self.gts is None:
+            self.pds = self.current_pd.copy()
+            self.gts = self.current_gt.copy()
+        else:
+            self.pds = np.vstack((self.pds, self.current_pd))
+            self.gts = np.vstack((self.gts, self.current_gt))
+
+    def accumulate(self):
+        accumulate_state = {
+            'gts': self.gts,
+            'pds': self.pds,
+        }
+        return accumulate_state
+
+
+@METRICS.register_module
+class SegAsCLasAP(SegAsCLasBase):
+    """
+    """
+
+    def __init__(self, num_classes, average=False):
+        self.num_classes = num_classes
+        self.average = average
+        super().__init__(num_classes=self.num_classes)
+
+    def accumulate(self):
+        res = average_precision_score(self.gts,
+                                      self.pds,
+                                      average=self.average)
+
+        accumulate_state = {
+            f"AP{'-' + self.average if self.average is not None else ''}": res
+        }
+        return accumulate_state
+
+
+@METRICS.register_module
+class SegAsCLasAUC(SegAsCLasBase):
+    """
+    """
+
+    def __init__(self, num_classes, average=False):
+        self.num_classes = num_classes
+        self.average = average
+        super().__init__(num_classes=self.num_classes)
+
+    def accumulate(self):
+        res = roc_auc_score(self.gts,
+                            self.pds,
+                            average=self.average)
+
+        accumulate_state = {
+            f"roc_auc_score"
+            f"{'-' + self.average if self.average is not None else ''}": res
+        }
+        return accumulate_state
+
+
+@METRICS.register_module
+class SegAsCLasACC(SegAsCLasBase):
+    """
+    """
+
+    def __init__(self, num_classes, average=False):
+        self.num_classes = num_classes
+        self.average = average
+        super().__init__(num_classes=self.num_classes)
+
+    def accumulate(self):
+        res = accuracy_score(self.gts, self.pds)
+
+        accumulate_state = {
+            f"accuracy_score": res
+        }
+        return accumulate_state
+
+    def compute(self, pred, target):
+        pred = np.where(pred >= 0.5, 1, 0)
+        assert pred.shape == target.shape
+        assert len(pred.shape) == 4, f"got unsupported map shape {pred.shape}"
+        n, c, h, w = pred.shape
+
+        self.current_pd = np.zeros((n, c))
+        self.current_gt = np.zeros((n, c))
+
+        for n_i in range(n):
+            for c_i in range(c):
+                pred_l = pred[n_i, c_i, :, :].reshape(-1)
+                target_l = target[n_i, c_i, :, :].reshape(-1)
+                pred_l[target_l == 255] = 0
+                self.current_pd[n_i, c_i] = max(pred_l)
+                if 1 in target_l:
+                    self.current_gt[n_i, c_i] = 1
+
+        return self.current_pd, self.current_gt
 
 
 @METRICS.register_module
