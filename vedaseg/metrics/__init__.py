@@ -1,4 +1,5 @@
 from .builder import build_metrics
 from .metrics import Accuracy, IoU, MIoU, DiceScore, \
-    MultiLabelIoU, MultiLabelMIoU, APscore, mAPscore, MultiLabelAccuracy
+    MultiLabelIoU, MultiLabelMIoU, MultiLabelAccuracy, SegAsCLasAP, \
+    SegAsCLasAUC, SegAsCLasACC
 
