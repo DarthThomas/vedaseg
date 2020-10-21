@@ -8,7 +8,7 @@ from volkscv.metrics import classification
 def build_metrics(cfg):
     mtcs = []
     for icfg in cfg:
-        if 'APscore' in icfg['type']:
+        if icfg['type'] in classification.__all__:
             mtc = build_from_cfg(icfg, classification, 'module')
         else:
             mtc = build_from_cfg(icfg, METRICS)
