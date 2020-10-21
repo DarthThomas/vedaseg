@@ -140,6 +140,42 @@ class Accuracy(ConfusionMatrix):
 
 
 @METRICS.register_module
+class MultiLabelAccuracy(MultiLabelConfusionMatrix):
+    """
+    Calculate accuracy based on confusion matrix for segmentation
+    Args:
+        num_classes (int): number of classes.
+        average (str): {'pixel', 'class'}
+            'pixel':
+                calculate pixel wise average accuracy
+            'class':
+                calculate class wise average accuracy
+    """
+
+    def __init__(self, num_classes, average='pixel'):
+        self.num_classes = num_classes
+        self.average = average
+        super().__init__(num_classes=self.num_classes)
+
+    def accumulate(self):
+
+        assert self.average in ('pixel', 'class'), \
+            'Accuracy only support "pixel" & "class" wise average'
+
+        if self.average == 'pixel':
+            accuracy = self.cfsmtx.diagonal(axis1=1, axis2=2).sum(axis=2) / (
+                    self.cfsmtx.sum(axis=2) + 1e-15)
+
+        elif self.average == 'class':
+            raise NotImplementedError('Not implmented yet')
+
+        accumulate_state = {
+            'accuracy': accuracy
+        }
+        return accumulate_state
+
+
+@METRICS.register_module
 class MultiLabelIoU(MultiLabelConfusionMatrix):
     def __init__(self, num_classes):
         super().__init__(num_classes)
