@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='0, 1',
+    gpu_id='0, 2',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -87,9 +87,11 @@ inference = dict(
             out_channels=nclasses,
             norm_cfg=norm_cfg,
             num_convs=2,
-            global_pool_cfg=dict(
-                type='AdaptiveMaxPool2d',
-                output_size=(1, 1),
+            upsample=dict(
+                type='Upsample',
+                size=(size_h, size_w),
+                mode='bilinear',
+                align_corners=True,
             ),
         )
     )
@@ -127,7 +129,6 @@ test = dict(
                      'KS_X-ray/ks_0/ks_0_test.json',
             img_prefix='',
             multi_label=multi_label,
-            as_classification=True,
         ),
         transforms=inference['transforms'],
         sampler=dict(
@@ -159,10 +160,9 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_overfit/ks_overfit.json',
+                         'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
-                as_classification=True,
             ),
             transforms=[
                 dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -195,10 +195,9 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_overfit/ks_overfit.json',
+                         'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
-                as_classification=True,
             ),
             transforms=inference['transforms'],
             sampler=dict(
@@ -206,7 +205,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=4,
+                samples_per_gpu=8,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
@@ -216,7 +215,7 @@ train = dict(
     ),
     resume=None,
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
-    optimizer=dict(type='SGD', lr=0.03, momentum=0.9, weight_decay=0.0001),
+    optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
     trainval_ratio=1,
