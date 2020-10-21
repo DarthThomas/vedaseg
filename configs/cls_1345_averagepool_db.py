@@ -111,14 +111,12 @@ common = dict(
     cudnn_deterministic=False,
     cudnn_benchmark=True,
     metrics=[
-        dict(type='APscore', 
-             num_classes=nclasses, 
-             mode='multilabel-indicator'),
-        dict(type='AUCscore', 
-             num_classes=nclasses, 
-             multi_class='ovr', 
-             mode='multilabel-indicator'),
-    ], 
+        dict(type='MultiLabelAccuracy',
+            num_classes=nclasses,),
+        dict(type='MultiLabelAccuracy',
+            num_classes=nclasses,
+            get_average=True,),
+        ], 
     dist_params=dict(backend='nccl'),
 )
 
