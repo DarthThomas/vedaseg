@@ -163,7 +163,7 @@ class MultiLabelAccuracy(MultiLabelConfusionMatrix):
             'Accuracy only support "pixel" & "class" wise average'
 
         if self.average == 'pixel':
-            accuracy = self.cfsmtx.diagonal(axis1=1, axis2=2).sum(axis=2) / (
+            accuracy = self.cfsmtx.diagonal(axis1=1, axis2=2).sum() / (
                     self.cfsmtx.sum(axis=2) + 1e-15)
 
         elif self.average == 'class':
