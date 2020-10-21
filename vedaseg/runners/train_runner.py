@@ -77,7 +77,7 @@ class TrainRunner(InferenceRunner):
             self.iter += 1
 
             with torch.no_grad():
-                output = self.compute(output)
+                #output = self.compute(output)
 
                 output = gather_tensor(output)
                 mask = gather_tensor(mask)
@@ -115,7 +115,7 @@ class TrainRunner(InferenceRunner):
                     mask = mask.cuda()
 
                 output = self.model(image)
-                output = self.compute(output)
+                # output = self.compute(output)
 
                 output = gather_tensor(output)
                 mask = gather_tensor(mask)
