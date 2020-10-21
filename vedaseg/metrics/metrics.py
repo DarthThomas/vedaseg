@@ -1,5 +1,4 @@
 import numpy as np
-from volkscv.metrics.classification.average_precision_score import APscore, mAPscore
 
 from .base import BaseMetric
 from .registry import METRICS
@@ -173,7 +172,7 @@ class MultiLabelAccuracy(MultiLabelConfusionMatrix):
             raise NotImplementedError('Not implmented yet')
 
         accumulate_state = {
-            'accuracy': accuracy
+            f'{"average " if self.get_average else ""}accuracy': accuracy
         }
         return accumulate_state
 
