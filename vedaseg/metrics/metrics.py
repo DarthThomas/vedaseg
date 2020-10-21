@@ -152,9 +152,10 @@ class MultiLabelAccuracy(MultiLabelConfusionMatrix):
                 calculate class wise average accuracy
     """
 
-    def __init__(self, num_classes, average='pixel'):
+    def __init__(self, num_classes, average='pixel', get_average=False):
         self.num_classes = num_classes
         self.average = average
+        self.get_average = get_average
         super().__init__(num_classes=self.num_classes)
 
     def accumulate(self):
@@ -163,13 +164,10 @@ class MultiLabelAccuracy(MultiLabelConfusionMatrix):
             'Accuracy only support "pixel" & "class" wise average'
 
         if self.average == 'pixel':
-<<<<<<< ours
-            accuracy = self.cfsmtx.diagonal(axis1=1, axis2=2).sum() / (
-                    self.cfsmtx.sum(axis=2) + 1e-15)
-=======
             accuracy = self.cfsmtx.diagonal(axis1=1, axis2=2).sum(axis=1) / (
                     self.cfsmtx.sum(axis=(1, 2)) + 1e-15)
->>>>>>> theirs
+            if self.get_average:
+                accuracy = np.mean(accuracy)
 
         elif self.average == 'class':
             raise NotImplementedError('Not implmented yet')
