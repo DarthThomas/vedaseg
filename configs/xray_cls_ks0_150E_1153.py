@@ -111,8 +111,13 @@ common = dict(
     cudnn_deterministic=False,
     cudnn_benchmark=True,
     metrics=[
-        dict(type='MultiLabelIoU', num_classes=nclasses),
-        dict(type='MultiLabelMIoU', num_classes=nclasses),
+        dict(type='APscore', 
+             num_classes=nclasses, 
+             mode='multilabel-indicator'),
+        dict(type='AUCscore', 
+             num_classes=nclasses, 
+             multi_class='ovr'
+             mode='multilabel-indicator'),
     ], 
     dist_params=dict(backend='nccl'),
 )
@@ -216,7 +221,7 @@ train = dict(
     ),
     resume=None,
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
-    optimizer=dict(type='SGD', lr=0.03, momentum=0.9, weight_decay=0.0001),
+    optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
     trainval_ratio=1,
