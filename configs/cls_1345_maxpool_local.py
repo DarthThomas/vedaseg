@@ -200,7 +200,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                         'ks_0_train.json',
+                         'ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
                 as_classification=True,
