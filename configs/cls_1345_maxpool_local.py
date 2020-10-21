@@ -217,11 +217,11 @@ train = dict(
             ),
         ),
     ),
-    resume=dict{
+    resume=dict(
             checkpoint='/media/data/home/tianhewang/DATA/workspace/project_x-ray/cls_1345_maxpool_local/epoch_10.pth', 
             resume_optimizer=True,
             resume_lr_scheduler=True,
-            resume_meta=True},
+            resume_meta=True),
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
     optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
