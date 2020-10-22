@@ -113,9 +113,8 @@ common = dict(
     cudnn_deterministic=False,
     cudnn_benchmark=True,
     metrics=[
-        dict(type='SegAsCLasACC', num_classes=nclasses),
-        dict(type='SegAsCLasAUC', num_classes=nclasses, average=None),
-        dict(type='SegAsCLasAP', num_classes=nclasses, average=None),
+        dict(type='MultiLabelIoU', num_classes=nclasses),
+        dict(type='MultiLabelMIoU', num_classes=nclasses),
         dict(type='MultiLabelAccuracy', num_classes=nclasses),
         dict(type='MultiLabelAccuracy', num_classes=nclasses,
              get_average=True),
