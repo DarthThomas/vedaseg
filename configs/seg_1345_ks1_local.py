@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='0, 3',
+    gpu_id='8, 9',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -87,9 +87,11 @@ inference = dict(
             out_channels=nclasses,
             norm_cfg=norm_cfg,
             num_convs=2,
-            global_pool_cfg=dict(
-                type='AdaptiveMaxPool2d',
-                output_size=(1, 1),
+            upsample=dict(
+                type='Upsample',
+                size=(size_h, size_w),
+                mode='bilinear',
+                align_corners=True,
             ),
         )
     )
@@ -111,10 +113,11 @@ common = dict(
     cudnn_deterministic=False,
     cudnn_benchmark=True,
     metrics=[
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses), 
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses,
+        dict(type='SegAsCLasACC', num_classes=nclasses),
+        dict(type='SegAsCLasAUC', num_classes=nclasses, average=None),
+        dict(type='SegAsCLasAP', num_classes=nclasses, average=None),
+        dict(type='MultiLabelAccuracy', num_classes=nclasses),
+        dict(type='MultiLabelAccuracy', num_classes=nclasses,
              get_average=True),
     ], 
     dist_params=dict(backend='nccl'),
@@ -127,10 +130,9 @@ test = dict(
             type=dataset_type,
             root=dataset_root,
             ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                     'ks_0_test.json',
+                     'ks_1_test.json',
             img_prefix='',
             multi_label=multi_label,
-            as_classification=True,
         ),
         transforms=inference['transforms'],
         sampler=dict(
@@ -162,10 +164,9 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                         'ks_0_train.json',
+                         'ks_1_train.json',
                 img_prefix='',
                 multi_label=multi_label,
-                as_classification=True,
             ),
             transforms=[
                 dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -198,10 +199,9 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                         'ks_0_val.json',
+                         'ks_1_val.json',
                 img_prefix='',
                 multi_label=multi_label,
-                as_classification=True,
             ),
             transforms=inference['transforms'],
             sampler=dict(
@@ -209,7 +209,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=4,
+                samples_per_gpu=8,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
@@ -217,6 +217,7 @@ train = dict(
             ),
         ),
     ),
+    resume=None,
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
     optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),

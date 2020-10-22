@@ -88,7 +88,7 @@ inference = dict(
             norm_cfg=norm_cfg,
             num_convs=2,
             global_pool_cfg=dict(
-                type='AdaptiveMaxPool2d',
+                type='AdaptiveAvgPool2d',
                 output_size=(1, 1),
             ),
         )
@@ -127,7 +127,7 @@ test = dict(
             type=dataset_type,
             root=dataset_root,
             ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                     'ks_0_test.json',
+                     'ks_1_test.json',
             img_prefix='',
             multi_label=multi_label,
             as_classification=True,
@@ -162,7 +162,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                         'ks_0_train.json',
+                         'ks_1_train.json',
                 img_prefix='',
                 multi_label=multi_label,
                 as_classification=True,
@@ -198,7 +198,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/media/data/home/tianhewang/Datasets/x-ray/proj-x-ray/'
-                         'ks_0_val.json',
+                         'ks_1_val.json',
                 img_prefix='',
                 multi_label=multi_label,
                 as_classification=True,
