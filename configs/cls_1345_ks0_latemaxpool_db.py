@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='0, 3',
+    gpu_id='1, 2',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -87,6 +87,7 @@ inference = dict(
             out_channels=nclasses,
             norm_cfg=norm_cfg,
             num_convs=2,
+            late_global_pool=False,
             global_pool_cfg=dict(
                 type='AdaptiveMaxPool2d',
                 output_size=(1, 1),
@@ -112,10 +113,10 @@ common = dict(
     cudnn_benchmark=True,
     metrics=[
         dict(type='MultiLabelAccuracy',
-            num_classes=nclasses,),
+             num_classes=nclasses,),
         dict(type='MultiLabelAccuracy',
-            num_classes=nclasses,
-            get_average=True,),
+             num_classes=nclasses,
+             get_average=True,),
         ], 
     dist_params=dict(backend='nccl'),
 )
@@ -127,7 +128,7 @@ test = dict(
             type=dataset_type,
             root=dataset_root,
             ann_file='/DATA/home/tianhewang/DataSets/'
-                     'KS_X-ray/ks_1/ks_1_test.json',
+                     'KS_X-ray/ks_0/ks_0_test.json',
             img_prefix='',
             multi_label=multi_label,
             as_classification=True,
@@ -162,7 +163,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_1/ks_1_train.json',
+                         'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
                 as_classification=True,
@@ -198,7 +199,7 @@ train = dict(
                 type=dataset_type,
                 root=dataset_root,
                 ann_file='/DATA/home/tianhewang/DataSets/'
-                         'KS_X-ray/ks_1/ks_1_val.json',
+                         'KS_X-ray/ks_0/ks_0_val.json',
                 img_prefix='',
                 multi_label=multi_label,
                 as_classification=True,
