@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('checkpoint', type=str, help='checkpoint file path')
     parser.add_argument('--distribute', default=False, action='store_true')
     parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--with_train', action='store_true')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -131,9 +132,10 @@ def main():
     inference_cfg = cfg['inference']
     common_cfg = cfg['common']
 
-    anno_files = [cfg['train']['data']['train']['dataset']['ann_file'],
-                  cfg['train']['data']['val']['dataset']['ann_file'],
+    anno_files = [cfg['train']['data']['val']['dataset']['ann_file'],
                   cfg['test']['data']['dataset']['ann_file']]
+    if args.with_train:
+        anno_files.append(cfg['train']['data']['train']['dataset']['ann_file'])
 
     runner = InferenceRunner(inference_cfg, common_cfg)
     runner.load_checkpoint(args.checkpoint)
