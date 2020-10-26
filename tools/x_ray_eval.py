@@ -18,6 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Test a segmentation model')
     parser.add_argument('config', type=str, help='config file path')
     parser.add_argument('checkpoint', type=str, help='checkpoint file path')
+    parser.add_argument('gpu_id', type=int, help='gpu to use', default=0)
     parser.add_argument('--distribute', default=False, action='store_true')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--with_train', action='store_true')
@@ -130,6 +131,7 @@ def main():
     _, fullname = os.path.split(cfg_path)
 
     inference_cfg = cfg['inference']
+    inference_cfg['gpu_id'] = f'{args.gpu_id}'
     common_cfg = cfg['common']
 
     anno_files = [cfg['train']['data']['val']['dataset']['ann_file'],
