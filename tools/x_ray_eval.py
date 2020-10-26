@@ -133,7 +133,7 @@ def main():
 
     anno_files = []
     for anno_name in ['val', 'test', 'train']:
-        anno_files.append([anno_name]['data']['dataset']['ann_file'])
+        anno_files.append(cfg[anno_name]['data']['dataset']['ann_file'])
 
     runner = InferenceRunner(inference_cfg, common_cfg)
     runner.load_checkpoint(args.checkpoint)
