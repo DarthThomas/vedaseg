@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import pickle
 
 import cv2
 import numpy as np
@@ -122,13 +123,24 @@ def eval_model(anno_file, runner, eval_seg=False):
           f"precision:{precision, sum(precision) / 2}\n"
           f"roc_auc_score:{roc_auc_score}")
 
+    return label_list, score_list
+
 
 def main():
     args = parse_args()
 
     cfg_path = args.config
     cfg = Config.fromfile(cfg_path)
+
     _, fullname = os.path.split(cfg_path)
+    fname, _ = os.path.splitext(fullname)
+
+    _, pth_fullname = os.path.split(args.checkpoint)
+    pthname, _ = os.path.splitext(pth_fullname)
+
+    root_workdir = cfg.pop('root_workdir')
+    workdir = os.path.join(root_workdir, fname, 'res', pth_fullname)
+    os.makedirs(workdir, exist_ok=True)
 
     inference_cfg = cfg['inference']
     inference_cfg['gpu_id'] = f'{args.gpu_id}'
@@ -144,10 +156,15 @@ def main():
     runner.getmap = True
     eval_seg = True if 'seg' in fullname else False
 
-    for anno_file in anno_files:
-        eval_model(anno_file,
-                   runner,
-                   eval_seg=eval_seg)
+    for anno_file, anno_type in zip(anno_files, ['val', 'test', 'train']):
+        label_list, score_list = eval_model(anno_file,
+                                            runner,
+                                            eval_seg=eval_seg)
+        label_fn = os.path.join(workdir, f'label_{anno_type}.pkl')
+        score_fn = os.path.join(workdir, f'score_{anno_type}.pkl')
+        for res, fn in zip([label_list, score_list], [label_fn, score_fn]):
+            with open(fn, 'wb') as f:
+                pickle.dump(res, f)
 
 
 if __name__ == '__main__':
