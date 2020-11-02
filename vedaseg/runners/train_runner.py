@@ -62,14 +62,27 @@ class TrainRunner(InferenceRunner):
         self.model.train()
 
         self.logger.info('Epoch {}, start training'.format(self.epoch + 1))
-        for idx, (image, mask) in enumerate(self.train_dataloader):
+        for idx, data in enumerate(self.train_dataloader):
             self.optimizer.zero_grad()
+
+            if len(data) == 3:
+                image, mask, cls = data
+            else:
+                image, mask = data
+
             if self.use_gpu:
                 image = image.cuda()
                 mask = mask.cuda()
+                if len(data) == 3:
+                    cls = cls.cuda()
 
             output = self.model(image)
-            loss = self.criterion(output, mask)
+
+            if len(data) == 2:
+                loss = self.criterion(output, mask)
+            else:
+                loss = self.criterion(output[1], cls)
+                loss += self.criterion(output[0], mask)
 
             loss.backward()
             self.optimizer.step()
@@ -109,7 +122,13 @@ class TrainRunner(InferenceRunner):
 
         self.logger.info('Start validating')
         with torch.no_grad():
-            for idx, (image, mask) in enumerate(self.val_dataloader):
+            for idx, data in enumerate(self.val_dataloader):
+
+                if len(data) == 3:
+                    image, mask, cls = data
+                else:
+                    image, mask = data
+
                 if self.use_gpu:
                     image = image.cuda()
                     mask = mask.cuda()
@@ -125,6 +144,8 @@ class TrainRunner(InferenceRunner):
                     output = output[:-self.val_exclude_num]
                     mask = mask[:-self.val_exclude_num]
 
+                if isinstance(output, list) and len(output) == 2:
+                    output = output[0]
                 self.metric(output.cpu().numpy(), mask.cpu().numpy())
                 res = self.metric.accumulate()
 

@@ -17,6 +17,9 @@ class BCEWithLogitsLoss(nn.Module):
         target = target.permute(0, 2, 3, 1).reshape(-1, c)
 
         valid_mask = target != self.ignore_index
-        losses = self.loss(pred[valid_mask], target[valid_mask].float())
 
-        return losses
+        if True in valid_mask:
+            losses = self.loss(pred[valid_mask], target[valid_mask].float())
+            return losses
+
+        return 0
