@@ -38,6 +38,7 @@ class XHead(nn.Module):
         self.global_pool = None
         self.with_seg = with_seg
         self.with_cls = with_cls
+        self.late_global_pool = late_global_pool
         #
         # self.seg_branch = None
         # self.cls_branch = None
@@ -60,7 +61,6 @@ class XHead(nn.Module):
 
         if with_cls:
             self.global_pool = build_torch_nn(global_pool_cfg)
-            self.late_global_pool = late_global_pool
             # self.cls_branch = self._make_cls_branch()
 
         if with_seg:
