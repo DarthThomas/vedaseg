@@ -118,6 +118,8 @@ common = dict(
     cudnn_deterministic=False,
     cudnn_benchmark=True,
     metrics=[
+        dict(type='MultiLabelIoU', num_classes=nclasses),
+        dict(type='MultiLabelMIoU', num_classes=nclasses),
         dict(type='MultiLabelAccuracy', 
              num_classes=nclasses), 
         dict(type='MultiLabelAccuracy', 
@@ -228,7 +230,7 @@ train = dict(
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
     trainval_ratio=1,
-    log_interval=5,
+    log_interval=10,
     snapshot_interval=5,
     save_best=True,
 )
