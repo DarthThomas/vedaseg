@@ -140,7 +140,8 @@ class TrainRunner(InferenceRunner):
                 # output = self.compute(output)
 
                 output = gather_tensor(output)
-                output = output[0]
+                if isinstance(output, list):
+                    output = output[0]
                 mask = gather_tensor(mask)
 
                 if idx + 1 == len(
