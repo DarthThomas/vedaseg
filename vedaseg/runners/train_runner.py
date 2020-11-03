@@ -140,6 +140,7 @@ class TrainRunner(InferenceRunner):
                 # output = self.compute(output)
 
                 output = gather_tensor(output)
+                output = output[0]
                 mask = gather_tensor(mask)
 
                 if idx + 1 == len(
@@ -150,7 +151,7 @@ class TrainRunner(InferenceRunner):
                 # if isinstance(output, list) and len(output) == 2:
                 #     output = output[0]
 
-                self.metric(output[0].cpu().numpy(), mask.cpu().numpy())
+                self.metric(output.cpu().numpy(), mask.cpu().numpy())
                 res = self.metric.accumulate()
 
                 if (idx + 1) % self.log_interval == 0:
