@@ -147,9 +147,10 @@ class TrainRunner(InferenceRunner):
                     output = output[:-self.val_exclude_num]
                     mask = mask[:-self.val_exclude_num]
 
-                if isinstance(output, list) and len(output) == 2:
-                    output = output[0]
-                self.metric(output.cpu().numpy(), mask.cpu().numpy())
+                # if isinstance(output, list) and len(output) == 2:
+                #     output = output[0]
+
+                self.metric(output[0].cpu().numpy(), mask.cpu().numpy())
                 res = self.metric.accumulate()
 
                 if (idx + 1) % self.log_interval == 0:
