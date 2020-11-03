@@ -44,6 +44,12 @@ def reduce_tensor(data, average=True):
 
 
 def gather_tensor(data):
+
+    if isinstance(data, list):
+        res = []
+        for element in data:
+            res.append(gather_tensor(element))
+        return res
     _, world_size = get_dist_info()
     if world_size < 2:
         return data
