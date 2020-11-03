@@ -96,6 +96,9 @@ class TrainRunner(InferenceRunner):
                 mask = gather_tensor(mask)
                 reduced_loss = reduce_tensor(loss.item())
 
+                if isinstance(output, list) and len(output) == 2:
+                    output = output[0]
+
                 self.metric(output.cpu().numpy(), mask.cpu().numpy())
                 res = self.metric.accumulate()
 
