@@ -107,6 +107,8 @@ class TrainRunner(InferenceRunner):
                 if len(data) == 3:
                     sep_loss = f"cls loss:{loss_cls:.4f}, seg loss" \
                                f":{loss_seg:.4f}"
+                else:
+                    sep_loss = ''
                 self.logger.info(
                     'Train, Epoch {}, Iter {}, LR {}, Loss {:.4f}, {}'.format(
                         self.epoch + 1, self.iter,
