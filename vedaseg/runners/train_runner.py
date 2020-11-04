@@ -81,8 +81,9 @@ class TrainRunner(InferenceRunner):
             if len(data) == 2:
                 loss = self.criterion(output, mask)
             else:
-                loss = self.criterion(output[1], cls)
-                loss += self.criterion(output[0], mask)
+                loss_cls = self.criterion(output[1], cls)
+                loss_seg = self.criterion(output[0], mask)
+                loss = loss_cls + loss_seg
 
             loss.backward()
             self.optimizer.step()
@@ -103,13 +104,18 @@ class TrainRunner(InferenceRunner):
                 res = self.metric.accumulate()
 
             if self.iter % self.log_interval == 0:
+                if len(data) == 3:
+                    sep_loss = f"cls loss:{loss_cls:.4f}, seg loss" \
+                               f":{loss_seg:.4f}"
                 self.logger.info(
                     'Train, Epoch {}, Iter {}, LR {}, Loss {:.4f}, {}'.format(
                         self.epoch + 1, self.iter,
                         ['{:.4f}'.format(lr) for lr in self.lr],
                         reduced_loss, ', '.join(
                             ['{}: {}'.format(k, np.round(v, 4)) for k, v in
-                             res.items()])))
+                             res.items()])
+                    ) + sep_loss
+                )
 
             if self.iter_based:
                 self.lr_scheduler.step()
