@@ -227,7 +227,7 @@ train = dict(
     ),
     resume=dict(
         checkpoint='/media/data/home/tianhewang/DATA/workspace/project_x-ray/'
-                   'semi_1345_ks0_latemaxpool_local/epoch_55.pth',
+                   'semi_1345_ks0_latemaxpool_local_cnt/best_mIoU.pth',
         resume_optimizer=True,
         resume_lr_scheduler=True,
         resume_meta=True),
