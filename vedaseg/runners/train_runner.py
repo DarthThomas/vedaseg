@@ -81,8 +81,8 @@ class TrainRunner(InferenceRunner):
             if len(data) == 2:
                 loss = self.criterion(output, mask)
             else:
-                loss_cls = self.criterion(output[1], cls)
                 loss_seg = self.criterion(output[0], mask)
+                loss_cls = self.criterion(output[1], cls)
                 loss = loss_cls + loss_seg
 
             loss.backward()
@@ -105,7 +105,7 @@ class TrainRunner(InferenceRunner):
 
             if self.iter % self.log_interval == 0:
                 if len(data) == 3:
-                    sep_loss = f"cls loss:{loss_cls:.4f}, seg loss" \
+                    sep_loss = f", cls loss:{loss_cls:.4f}, seg loss" \
                                f":{loss_seg:.4f}"
                 else:
                     sep_loss = ''
