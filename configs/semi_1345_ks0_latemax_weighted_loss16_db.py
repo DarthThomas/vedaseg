@@ -4,8 +4,8 @@ import cv2
 nclasses = 2
 ignore_label = 255
 image_pad_value = (255, 255, 255)
-size_h = 673
-size_w = 1153
+size_h = 1153
+size_w = 1345
 img_norm_cfg = dict(mean=(0.485, 0.456, 0.406),
                     std=(0.229, 0.224, 0.225),
                     max_pixel_value=255.0)
@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='2, 5',
+    gpu_id='0, 8',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -81,12 +81,17 @@ inference = dict(
         ),
         # model/head
         head=dict(
-            type='Head',
+            type='XHead',
             in_channels=304,
             inter_channels=256,
             out_channels=nclasses,
             norm_cfg=norm_cfg,
             num_convs=2,
+            late_global_pool=False,
+            global_pool_cfg=dict(
+                type='AdaptiveMaxPool2d',
+                output_size=(1, 1),
+            ),
             upsample=dict(
                 type='Upsample',
                 size=(size_h, size_w),
@@ -115,6 +120,11 @@ common = dict(
     metrics=[
         dict(type='MultiLabelIoU', num_classes=nclasses),
         dict(type='MultiLabelMIoU', num_classes=nclasses),
+        dict(type='MultiLabelAccuracy', 
+             num_classes=nclasses), 
+        dict(type='MultiLabelAccuracy', 
+             num_classes=nclasses,
+             get_average=True),
     ], 
     dist_params=dict(backend='nccl'),
 )
@@ -151,7 +161,7 @@ test = dict(
 )
 
 ## 2.2 configuration for train
-max_epochs = 50
+max_epochs = 150
 
 train = dict(
     data=dict(
@@ -163,6 +173,8 @@ train = dict(
                          'KS_X-ray/ks_0/ks_0_train.json',
                 img_prefix='',
                 multi_label=multi_label,
+                seg_list='/DATA/home/tianhewang/DataSets/'
+                         'KS_X-ray/ks_0/ks_0_half_train.json',
             ),
             transforms=[
                 dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -183,7 +195,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=4,
+                samples_per_gpu=2,
                 workers_per_gpu=2,
                 shuffle=True,
                 drop_last=True,
@@ -205,7 +217,7 @@ train = dict(
             ),
             dataloader=dict(
                 type='DataLoader',
-                samples_per_gpu=16,
+                samples_per_gpu=4,
                 workers_per_gpu=4,
                 shuffle=False,
                 drop_last=False,
@@ -213,13 +225,13 @@ train = dict(
             ),
         ),
     ),
-    resume=None,
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
-    optimizer=dict(type='SGD', lr=0.03, momentum=0.9, weight_decay=0.0001),
+    loss_weight=[4, 0.25],  # [seg, cls]
+    optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
     trainval_ratio=1,
-    log_interval=5,
+    log_interval=10,
     snapshot_interval=5,
     save_best=True,
 )
