@@ -29,6 +29,7 @@ class TrainRunner(InferenceRunner):
 
         self.optimizer = self._build_optimizer(train_cfg['optimizer'])
         self.criterion = self._build_criterion(train_cfg['criterion'])
+        self.loss_weight = train_cfg.get('loss_weight', [1, 1])
         self.lr_scheduler = self._build_lr_scheduler(train_cfg['lr_scheduler'])
         self.max_epochs = train_cfg['max_epochs']
         self.log_interval = train_cfg.get('log_interval', 10)
@@ -83,7 +84,9 @@ class TrainRunner(InferenceRunner):
             else:
                 loss_seg = self.criterion(output[0], mask)
                 loss_cls = self.criterion(output[1], cls)
-                loss = loss_cls + loss_seg
+                loss = 0
+                for weight, cret in zip(self.loss_weight, [loss_seg, loss_cls]):
+                    loss += weight * cret
 
             loss.backward()
             self.optimizer.step()
