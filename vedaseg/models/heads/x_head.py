@@ -29,35 +29,57 @@ class XHead(nn.Module):
                  with_seg=True,
                  with_cls=True,
                  global_pool_cfg=None,
-                 late_global_pool=False):
+                 late_global_pool=False,
+                 share_weights=False):
         super().__init__()
 
-        self.conv_modules = None
-        self.conv1x1 = None
+        self.conv_modules_seg = None
+        self.conv1x1_seg = None
         self.upsample = None
         self.global_pool = None
         self.with_seg = with_seg
         self.with_cls = with_cls
         self.late_global_pool = late_global_pool
+        self.share_weights = share_weights
         #
         # self.seg_branch = None
         # self.cls_branch = None
 
         if num_convs > 0:
-            self.conv_modules = ConvModules(in_channels,
-                                            inter_channels,
-                                            3,
-                                            padding=1,
-                                            conv_cfg=conv_cfg,
-                                            norm_cfg=norm_cfg,
-                                            act_cfg=act_cfg,
-                                            num_convs=num_convs,
-                                            dropouts=dropouts)
+            self.conv_modules_seg = ConvModules(in_channels,
+                                                inter_channels,
+                                                3,
+                                                padding=1,
+                                                conv_cfg=conv_cfg,
+                                                norm_cfg=norm_cfg,
+                                                act_cfg=act_cfg,
+                                                num_convs=num_convs,
+                                                dropouts=dropouts)
+            if share_weights:
+                self.conv_modules_cls = self.conv_modules_seg
+            else:
+                self.conv_modules_cls = ConvModules(in_channels,
+                                                    inter_channels,
+                                                    3,
+                                                    padding=1,
+                                                    conv_cfg=conv_cfg,
+                                                    norm_cfg=norm_cfg,
+                                                    act_cfg=act_cfg,
+                                                    num_convs=num_convs,
+                                                    dropouts=dropouts)
 
         if num_convs > 0:
-            self.conv1x1 = nn.Conv2d(inter_channels, out_channels, 1)
+            self.conv1x1_seg = nn.Conv2d(inter_channels, out_channels, 1)
+            if share_weights:
+                self.conv1x1_cls = self.conv1x1_seg
+            else:
+                self.conv1x1_cls = nn.Conv2d(inter_channels, out_channels, 1)
         else:
-            self.conv1x1 = nn.Conv2d(in_channels, out_channels, 1)
+            self.conv1x1_seg = nn.Conv2d(in_channels, out_channels, 1)
+            if share_weights:
+                self.conv1x1_cls = self.conv1x1_seg
+            else:
+                self.conv1x1_cls = nn.Conv2d(in_channels, out_channels, 1)
 
         if with_cls:
             self.global_pool = build_torch_nn(global_pool_cfg)
@@ -74,24 +96,26 @@ class XHead(nn.Module):
     def forward(self, x):
         res = []
 
-        feat = self.conv_modules(x)
+        feat = self.conv_modules_seg(x)
         feat_1x1 = None
 
         if self.with_seg:
-            feat_1x1 = self.conv1x1(feat)
+            feat_1x1 = self.conv1x1_seg(feat)
             if self.upsample is not None:
                 res.append(self.upsample(feat_1x1))
             else:
                 res.append(feat_1x1)
 
         if self.with_cls:
+            if not self.share_weights:
+                feat = self.conv_modules_cls(x)
             if self.late_global_pool:
                 if feat_1x1 is None:
-                    feat_1x1 = self.conv1x1(feat)
+                    feat_1x1 = self.conv1x1_cls(feat)
                 cls_feat = self.global_pool(feat_1x1)
             else:
                 cls_feat = self.global_pool(feat)
-                cls_feat = self.conv1x1(cls_feat)
+                cls_feat = self.conv1x1_cls(cls_feat)
             res.append(cls_feat)
 
         return res
