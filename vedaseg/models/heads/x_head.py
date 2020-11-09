@@ -30,7 +30,7 @@ class XHead(nn.Module):
                  with_cls=True,
                  global_pool_cfg=None,
                  late_global_pool=False,
-                 share_weights=False):
+                 share_weights=True):
         super().__init__()
 
         self.conv_modules_seg = None
