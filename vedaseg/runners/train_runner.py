@@ -108,8 +108,8 @@ class TrainRunner(InferenceRunner):
 
             if self.iter % self.log_interval == 0:
                 if len(data) == 3:
-                    sep_loss = f", cls loss:{loss_cls:.4f}, seg loss" \
-                               f":{loss_seg:.4f}"
+                    sep_loss = f", cls loss:{loss_cls:.4f}(weight:{self.loss_weight[1]})" \
+                               f", seg loss:{loss_seg:.4f}(weight:{self.loss_weight[0]})"
                 else:
                     sep_loss = ''
                 self.logger.info(
