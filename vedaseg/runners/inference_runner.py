@@ -56,6 +56,8 @@ class InferenceRunner(Common):
 
     def compute(self, output):
         if self.multi_label:
+            if isinstance(output, list):
+                output = output[0]
             output = output.sigmoid()
             if self.getmap:
                 return output
