@@ -91,6 +91,8 @@ class XHead(nn.Module):
             # self.seg_branch = self._make_seg_branch()
 
         logger.info('Head init weights')
+        if not self.share_weights:
+            logger.info('    Separate head, no share parameters')
         init_weights(self.modules())
 
     def forward(self, x):
