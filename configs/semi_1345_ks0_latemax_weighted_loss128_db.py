@@ -120,11 +120,11 @@ common = dict(
     metrics=[
         dict(type='MultiLabelIoU', num_classes=nclasses),
         dict(type='MultiLabelMIoU', num_classes=nclasses),
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses), 
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses,
-             get_average=True),
+        #    dict(type='MultiLabelAccuracy', 
+        #         num_classes=nclasses), 
+        #    dict(type='MultiLabelAccuracy', 
+        #         num_classes=nclasses,
+        #         get_average=True),
     ], 
     dist_params=dict(backend='nccl'),
 )
@@ -225,8 +225,13 @@ train = dict(
             ),
         ),
     ),
+    resume=dict(
+            checkpoint='/DATA/home/tianhewang/work_spaces/project_x-ray/semi_1345_ks0_latemax_weighted_loss128_db/epoch_110.pth',
+            resume_optimizer=True,
+            resume_lr_scheduler=True,
+            resume_meta=True),
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
-    loss_weight=[4, 0.0625 / 2],  # [seg, cls]
+    loss_weight=[4, 4 / 128],  # [seg, cls]
     optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
     lr_scheduler=dict(type='PolyLR', max_epochs=max_epochs),
     max_epochs=max_epochs,
