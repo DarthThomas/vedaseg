@@ -228,7 +228,7 @@ train = dict(
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
     resume=dict(
             checkpoint='/media/data/home/tianhewang/DATA/workspace/project_x-ray/'
-            'semi_1345_ks0_latemax_weighted_loss128_1base_local/epoch_40.pth',
+            'semi_1345_ks0_latemax_weighted_loss128_1base_local/epoch_105.pth',
             resume_optimizer=True,
             resume_lr_scheduler=True,
             resume_meta=True),
