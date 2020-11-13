@@ -121,11 +121,11 @@ common = dict(
     metrics=[
         dict(type='MultiLabelIoU', num_classes=nclasses),
         dict(type='MultiLabelMIoU', num_classes=nclasses),
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses), 
-        dict(type='MultiLabelAccuracy', 
-             num_classes=nclasses,
-             get_average=True),
+        #dict(type='MultiLabelAccuracy', 
+        #     num_classes=nclasses), 
+        #dict(type='MultiLabelAccuracy', 
+        #     num_classes=nclasses,
+        #     get_average=True),
     ], 
     dist_params=dict(backend='nccl'),
 )

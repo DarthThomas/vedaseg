@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='1, 2',
+    gpu_id='0, 3',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -227,7 +227,7 @@ train = dict(
     ),
     resume=dict(
             checkpoint='/media/data/home/tianhewang/DATA/workspace/project_x-ray/'
-            'semi_1345_ks0_latemax_weighted_loss64_2base_local/epoch_50.pth',
+            'semi_1345_ks0_latemax_weighted_loss64_2base_local/epoch_125.pth',
             resume_optimizer=True,
             resume_lr_scheduler=True,
             resume_meta=True),
