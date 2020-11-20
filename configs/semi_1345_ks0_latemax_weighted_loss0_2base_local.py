@@ -13,7 +13,7 @@ norm_cfg = dict(type='BN')
 multi_label = True
 
 inference = dict(
-    gpu_id='0, 3',
+    gpu_id='1, 2',
     multi_label=multi_label,
     transforms=[
         dict(type='LongestMaxSize', h_max=size_h, w_max=size_w,
@@ -225,6 +225,12 @@ train = dict(
             ),
         ),
     ),
+    resume=dict(
+        checkpoint='/media/data/home/tianhewang/DATA/workspace/project_x-ray/'
+                   'semi_1345_ks0_latemax_weighted_loss0_2base_local/epoch_10.pth',
+        resume_optimizer=True,
+        resume_lr_scheduler=True,
+        resume_meta=True),
     criterion=dict(type='BCEWithLogitsLoss', ignore_index=ignore_label),
     loss_weight=[2, 0],  # [seg, cls]
     optimizer=dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001),
