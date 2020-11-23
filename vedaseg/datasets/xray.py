@@ -15,7 +15,8 @@ logger = logging.getLogger()
 class XrayDataset(CocoDataset):
     def __init__(self, ann_file, img_prefix='', transform=None, root='',
                  multi_label=True, as_classification=False,
-                 abs_ann_path=True, seg_list=None):
+                 abs_ann_path=True, seg_list=None,
+                 ignore_cls_label_for_seg=False):
         super().__init__(root=root,
                          ann_file=ann_file,
                          img_prefix=img_prefix,
@@ -24,6 +25,7 @@ class XrayDataset(CocoDataset):
                          abs_ann_path=abs_ann_path)
         self.as_classification = as_classification
         self.seg_list = None
+        self.ignore_cls_label_for_seg = ignore_cls_label_for_seg
         if seg_list is not None:
             seg_coco = COCO(seg_list)
             self.seg_list = set(seg_coco.imgs.keys())
@@ -46,6 +48,8 @@ class XrayDataset(CocoDataset):
                 if 1 in current:
                     clas_gt[clas_ind, 0, 0] = 1
             if img_info['id'] in self.seg_list:
+                if self.ignore_cls_label_for_seg:
+                    clas_gt = 255 * torch.ones_like(clas_gt)
                 return image, masks.long(), clas_gt.long()
             else:
                 dummy_mask = 255 * torch.ones_like(masks)
